@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Despensa Monchi 🧅</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --verde:#1D9E75;--verde-dark:#0F6E56;--verde-light:#E1F5EE;
+  --rojo:#E24B4A;--rojo-light:#FCEBEB;
+  --naranja:#BA7517;--naranja-light:#FAEEDA;
+  --azul:#185FA5;--azul-light:#E6F1FB;
+  --morado:#534AB7;--morado-light:#EEEDFE;
+  --borde:#e0e0e0;--texto:#1a1a1a;--texto-sec:#666;
+  --bg:#ffffff;--bg-sec:#f8f9fa;--bg-page:#f2f2f2;
+  --radio:12px;--radio-sm:8px;--radio-lg:16px;
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --borde:#333;--texto:#f0f0f0;--texto-sec:#999;
+    --bg:#1c1c1e;--bg-sec:#2c2c2e;--bg-page:#000;
+    --verde-light:#0a3d2e;--rojo-light:#3d1010;
+    --naranja-light:#3d2a05;--azul-light:#0a1f3d;--morado-light:#1a1840;
+  }
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg-page);color:var(--texto);font-size:15px;min-height:100vh;-webkit-tap-highlight-color:transparent}
+#loading{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:999}
+.spinner{width:36px;height:36px;border:3px solid var(--verde-light);border-top-color:var(--verde);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#login-screen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:2rem;background:var(--bg-page)}
+.login-card{background:var(--bg);border-radius:24px;padding:2.5rem 2rem;max-width:360px;width:100%;text-align:center;border:0.5px solid var(--borde)}
+.login-logo{font-size:56px;margin-bottom:1rem;display:block}
+.login-title{font-size:24px;font-weight:700;margin-bottom:.4rem}
+.login-sub{font-size:14px;color:var(--texto-sec);margin-bottom:2rem;line-height:1.6}
+.btn-google{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;padding:13px;border:1px solid var(--borde);border-radius:var(--radio);background:var(--bg);font-size:15px;font-weight:600;cursor:pointer;color:var(--texto)}
+.btn-google img{width:20px;height:20px}
+#app-screen{display:none;max-width:480px;margin:0 auto;padding-bottom:80px}
+.header{background:var(--bg);border-bottom:0.5px solid var(--borde);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20}
+.header-title{font-size:17px;font-weight:700}
+.btn-logout{font-size:12px;color:var(--texto-sec);background:none;border:0.5px solid var(--borde);border-radius:20px;padding:4px 10px;cursor:pointer;font-family:inherit}
+.postit{background:var(--naranja-light);border-bottom:0.5px solid var(--borde);padding:10px 16px;display:flex;align-items:center;gap:10px;cursor:pointer}
+.postit-text{flex:1;font-size:13px;color:var(--naranja);font-weight:500}
+.postit-text.vacio{color:var(--texto-sec);font-weight:400;font-style:italic}
+.rw{background:var(--bg);border-bottom:0.5px solid var(--borde);padding:10px 16px;display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.rw-item{text-align:center;padding:6px 2px;border-radius:8px;cursor:pointer}
+.rw-num{font-size:20px;font-weight:700;line-height:1}
+.rw-label{font-size:9px;color:var(--texto-sec);margin-top:2px;font-weight:500;text-transform:uppercase}
+.tabs{background:var(--bg);border-bottom:0.5px solid var(--borde);display:flex;position:sticky;top:53px;z-index:19;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:1;min-width:55px;padding:8px 2px 6px;text-align:center;font-size:10px;color:var(--texto-sec);cursor:pointer;border-bottom:2px solid transparent;font-weight:600;white-space:nowrap}
+.tab .ti{font-size:17px;display:block;margin-bottom:2px}
+.tab.active{color:var(--verde);border-bottom-color:var(--verde)}
+.section{padding:12px;display:none}
+.section.active{display:block}
+.sec-label{font-size:10px;font-weight:700;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.06em;padding:8px 0 4px;margin-top:4px}
+.card{background:var(--bg);border:0.5px solid var(--borde);border-radius:var(--radio);padding:1rem 1.25rem;margin-bottom:10px}
+.card-title{font-weight:700;font-size:11px;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px}
+.field-label{font-size:12px;color:var(--texto-sec);margin-bottom:4px;font-weight:600}
+input[type=text],input[type=number],input[type=date],select,textarea{width:100%;padding:10px 12px;border:0.5px solid var(--borde);border-radius:var(--radio-sm);font-size:14px;background:var(--bg);color:var(--texto);margin-bottom:10px;-webkit-appearance:none;appearance:none;font-family:inherit}
+textarea{resize:vertical;min-height:70px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--verde);box-shadow:0 0 0 3px rgba(29,158,117,.12)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn{width:100%;padding:12px;border-radius:var(--radio-sm);font-size:14px;font-weight:700;cursor:pointer;border:none;font-family:inherit}
+.btn-primary{background:var(--verde);color:white}
+.btn-primary:active{opacity:.85}
+.btn-outline{background:var(--bg);color:var(--texto);border:0.5px solid var(--borde)}
+.btn-danger{background:var(--rojo);color:white}
+.btn-warn{background:var(--naranja);color:white}
+.btn-sm{padding:6px 14px;width:auto;font-size:12px;border-radius:20px}
+.btn-icon{background:none;border:0.5px solid var(--borde);border-radius:8px;padding:6px 9px;cursor:pointer;font-size:14px;line-height:1}
+.btn-wa{background:#25D366;color:white;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;border-radius:var(--radio-sm);font-size:14px;font-weight:700;border:none;cursor:pointer;font-family:inherit}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+.badge-ok{background:var(--verde-light);color:var(--verde-dark)}
+.badge-low{background:var(--naranja-light);color:var(--naranja)}
+.badge-out{background:var(--rojo-light);color:#A32D2D}
+.badge-blue{background:var(--azul-light);color:var(--azul)}
+.badge-morado{background:var(--morado-light);color:var(--morado)}
+.item-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--borde)}
+.item-row:last-child{border-bottom:none}
+.item-info{flex:1;min-width:0}
+.item-name{font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item-meta{font-size:12px;color:var(--texto-sec);margin-top:1px}
+.item-notas{font-size:11px;color:var(--verde-dark);font-style:italic;margin-top:2px}
+.item-vence{font-size:11px;color:var(--morado);margin-top:2px}
+.item-foto{width:38px;height:38px;border-radius:8px;object-fit:cover;flex-shrink:0;border:0.5px solid var(--borde)}
+.item-foto-ph{width:38px;height:38px;border-radius:8px;background:var(--bg-sec);border:0.5px solid var(--borde);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.search-row{display:flex;gap:8px;margin-bottom:10px}
+.search-row input{margin-bottom:0;flex:1}
+.search-row select{margin-bottom:0;width:auto;min-width:90px}
+.chip-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.chip{padding:6px 14px;border-radius:20px;font-size:12px;cursor:pointer;border:0.5px solid var(--borde);background:var(--bg);color:var(--texto-sec);font-family:inherit;font-weight:600}
+.chip.active{background:var(--verde);color:white;border-color:var(--verde)}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.stat-card{background:var(--bg);border:0.5px solid var(--borde);border-radius:var(--radio-sm);padding:14px;text-align:center}
+.stat-num{font-size:28px;font-weight:700}
+.stat-label{font-size:11px;color:var(--texto-sec);margin-top:2px;font-weight:500}
+.report-block{background:var(--bg-sec);border-radius:var(--radio-sm);padding:14px;margin-bottom:10px;border:0.5px solid var(--borde)}
+.report-title{font-size:13px;font-weight:700;margin-bottom:8px}
+.report-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:5px 0;border-bottom:0.5px solid var(--borde)}
+.report-row:last-child{border-bottom:none}
+.tip{font-size:12px;color:var(--verde-dark);background:var(--verde-light);border-radius:8px;padding:9px 12px;margin-top:8px;line-height:1.5;font-weight:500}
+.hist-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--borde)}
+.hist-row:last-child{border-bottom:none}
+.hist-icon{font-size:18px;flex-shrink:0}
+.hist-info{flex:1}
+.hist-producto{font-weight:600;font-size:13px}
+.hist-meta{font-size:11px;color:var(--texto-sec);margin-top:1px}
+#modo-super{display:none;position:fixed;inset:0;background:var(--bg);z-index:50;flex-direction:column}
+#modal-super-cant{z-index:60}
+#modo-super.open{display:flex}
+.super-header{background:var(--verde);color:white;padding:16px;display:flex;align-items:center;justify-content:space-between}
+.super-title{font-size:20px;font-weight:700}
+.super-list{flex:1;overflow-y:auto;padding:12px}
+.super-cat-label{font-size:11px;font-weight:700;color:var(--texto-sec);text-transform:uppercase;letter-spacing:.05em;padding:10px 0 4px}
+.super-item{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--bg);border:0.5px solid var(--borde);border-radius:var(--radio);margin-bottom:6px;cursor:pointer}
+.super-item.checked{opacity:.4}
+.super-item-check{width:26px;height:26px;border-radius:50%;border:2px solid var(--borde);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px}
+.super-item.checked .super-item-check{background:var(--verde);border-color:var(--verde);color:white}
+.super-item-name{font-size:17px;font-weight:600}
+.super-item-cat{font-size:12px;color:var(--texto-sec)}
+.super-footer{padding:12px;border-top:0.5px solid var(--borde);display:flex;gap:8px}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:40;display:none;align-items:flex-end;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg);border-radius:20px 20px 0 0;padding:1.5rem;width:100%;max-width:480px;max-height:88vh;overflow-y:auto}
+.modal-handle{width:40px;height:4px;background:var(--borde);border-radius:2px;margin:0 auto 1rem;display:block}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+.modal-title{font-size:17px;font-weight:700}
+.btn-close{background:none;border:none;font-size:22px;cursor:pointer;color:var(--texto-sec);padding:4px}
+.foto-btn{display:flex;align-items:center;gap:8px;padding:10px 14px;border:0.5px dashed var(--borde);border-radius:var(--radio-sm);cursor:pointer;font-size:13px;color:var(--texto-sec);background:var(--bg-sec);margin-bottom:10px;width:100%}
+.foto-preview{width:80px;height:80px;border-radius:var(--radio-sm);object-fit:cover;border:0.5px solid var(--borde);margin-bottom:10px}
+.empty{text-align:center;padding:48px 20px;color:var(--texto-sec)}
+.empty-icon{font-size:48px;display:block;margin-bottom:12px;opacity:.3}
+.empty p{font-size:14px;line-height:1.6}
+.deseo-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--borde)}
+.deseo-row:last-child{border-bottom:none}
+.logro-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:0.5px solid var(--borde)}
+.logro-item:last-child{border-bottom:none}
+.logro-icon{font-size:28px;flex-shrink:0}
+.logro-titulo{font-weight:700;font-size:14px}
+.logro-desc{font-size:12px;color:var(--texto-sec);margin-top:2px}
+#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:white;padding:10px 22px;border-radius:20px;font-size:13px;font-weight:600;z-index:200;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;max-width:90vw}
+#toast.show{opacity:1}
+.export-area{width:100%;height:110px;font-size:11px;font-family:monospace;border:0.5px solid var(--borde);border-radius:8px;padding:8px;background:var(--bg-sec);color:var(--texto);resize:none}
+.divider{height:0.5px;background:var(--borde);margin:12px 0}
+.section-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.section-h-title{font-size:16px;font-weight:700}
+/* COMIDAS */
+.comida-card{background:var(--bg);border:0.5px solid var(--borde);border-radius:var(--radio);padding:12px 16px;margin-bottom:8px}
+.comida-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.comida-nombre{font-weight:700;font-size:15px}
+.comida-dia{font-size:12px;color:var(--texto-sec)}
+.comida-ingr{font-size:12px;color:var(--texto-sec);margin-top:4px;line-height:1.5}
+.comida-estado{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;font-weight:600}
+/* VIAJES */
+.viaje-card{background:var(--azul-light);border:0.5px solid var(--azul);border-radius:var(--radio);padding:14px 16px;margin-bottom:10px}
+.viaje-titulo{font-weight:700;font-size:15px;color:var(--azul)}
+.viaje-fechas{font-size:12px;color:var(--azul);margin-top:2px}
+.viaje-alerta{background:var(--rojo-light);border:0.5px solid var(--rojo);border-radius:var(--radio-sm);padding:10px 12px;margin-top:10px}
+.viaje-alerta-title{font-size:12px;font-weight:700;color:#A32D2D;margin-bottom:6px}
+.viaje-alerta-item{font-size:13px;color:#A32D2D;padding:2px 0}
+/* LISTA MANUAL */
+.lista-manual-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--borde)}
+.lista-manual-item:last-child{border-bottom:none}
+.lista-manual-nombre{flex:1;font-size:14px;font-weight:500}
+.lista-manual-badge{font-size:11px;background:var(--bg-sec);color:var(--texto-sec);border-radius:20px;padding:2px 8px;font-weight:600}
+/* CANTIDAD SUPER */
+.super-cant-row{display:flex;align-items:center;gap:8px;margin-top:8px}
+.super-cant-row input{margin-bottom:0;width:80px;padding:6px 10px;font-size:14px}
+.super-cant-row select{margin-bottom:0;width:auto;padding:6px 8px;font-size:13px}
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <span style="font-size:40px">🧅</span>
+  <div class="spinner"></div>
+  <span style="font-size:13px;color:var(--texto-sec)">Cargando despensa...</span>
+</div>
+
+<div id="login-screen">
+  <div class="login-card">
+    <span class="login-logo">🧅</span>
+    <div class="login-title">Despensa Monchi</div>
+    <div class="login-sub">Gestioná juntos lo que tienen en casa. Siempre sincronizado.</div>
+    <button class="btn-google" id="btn-login">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="">
+      Entrar con Google
+    </button>
+  </div>
+</div>
+
+<div id="app-screen">
+  <div class="header">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:22px">🧅</span>
+      <span class="header-title">Despensa Monchi</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:12px;color:var(--texto-sec)" id="user-name"></span>
+      <button class="btn-logout" onclick="logout()">Salir</button>
+    </div>
+  </div>
+
+  <div class="postit" onclick="abrirPostit()">
+    <span style="font-size:18px">📌</span>
+    <span class="postit-text vacio" id="postit-display">Tocá para dejar una nota...</span>
+    <span style="font-size:10px;color:var(--texto-sec)" id="postit-by"></span>
+  </div>
+
+  <div class="rw">
+    <div class="rw-item" onclick="showTab('stock');filtrarEstado('out')">
+      <div class="rw-num" style="color:#A32D2D" id="rw-out">0</div>
+      <div class="rw-label">❌ Faltan</div>
+    </div>
+    <div class="rw-item" onclick="showTab('stock');filtrarEstado('low')">
+      <div class="rw-num" style="color:var(--naranja)" id="rw-low">0</div>
+      <div class="rw-label">⚠️ Poco</div>
+    </div>
+    <div class="rw-item" onclick="showTab('stock')">
+      <div class="rw-num" style="color:var(--morado)" id="rw-vence">0</div>
+      <div class="rw-label">⏰ Vencen</div>
+    </div>
+    <div class="rw-item" onclick="abrirModoSuper()">
+      <div class="rw-num" style="color:var(--verde)">🛒</div>
+      <div class="rw-label">Al super</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="showTab('stock')" id="tab-stock"><span class="ti">🏠</span>Despensa</div>
+    <div class="tab" onclick="showTab('agregar')" id="tab-agregar"><span class="ti">➕</span>Agregar</div>
+    <div class="tab" onclick="showTab('lista')" id="tab-lista"><span class="ti">🛒</span>Lista</div>
+    <div class="tab" onclick="showTab('comidas')" id="tab-comidas"><span class="ti">🍽️</span>Comidas</div>
+    <div class="tab" onclick="showTab('viajes')" id="tab-viajes"><span class="ti">✈️</span>Viajes</div>
+    <div class="tab" onclick="showTab('historial')" id="tab-historial"><span class="ti">📋</span>Historial</div>
+    <div class="tab" onclick="showTab('recetas')" id="tab-recetas"><span class="ti">🍳</span>Recetas</div>
+    <div class="tab" onclick="showTab('deseos')" id="tab-deseos"><span class="ti">⭐</span>Deseos</div>
+    <div class="tab" onclick="showTab('informe')" id="tab-informe"><span class="ti">📊</span>Informe</div>
+    <div class="tab" onclick="showTab('logros')" id="tab-logros"><span class="ti">🏆</span>Logros</div>
+  </div>
+
+  <!-- DESPENSA -->
+  <div class="section active" id="sec-stock">
+    <div class="search-row">
+      <input type="text" id="buscar" placeholder="🔍 Buscar..." oninput="renderStock()">
+      <select id="filtro-cat" onchange="renderStock()">
+        <option value="">Todo</option>
+        <option>Almacén</option><option>Lácteos</option><option>Frutas y verduras</option>
+        <option>Carnes</option><option>Bebidas</option><option>Freezer</option>
+        <option>Limpieza</option><option>Higiene</option><option>Farmacia</option><option>Otro</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:10px">
+      <button class="chip active" id="vista-estado-btn" onclick="setVista('estado')">Por estado</button>
+      <button class="chip" id="vista-cat-btn" onclick="setVista('categoria')">Por categoría</button>
+    </div>
+    <div id="stock-list"></div>
+  </div>
+
+  <!-- AGREGAR -->
+  <div class="section" id="sec-agregar">
+    <div class="card">
+      <div class="card-title" id="form-titulo">Agregar producto</div>
+      <input type="hidden" id="edit-id">
+      <div class="field-label">Nombre *</div>
+      <input type="text" id="np-nombre" placeholder="ej: Aceite girasol, Yerba, Leche...">
+      <div class="field-label">Categoría</div>
+      <select id="np-cat">
+        <option>Almacén</option><option>Lácteos</option><option>Frutas y verduras</option>
+        <option>Carnes</option><option>Bebidas</option><option>Freezer</option>
+        <option>Limpieza</option><option>Higiene</option><option>Farmacia</option><option>Otro</option>
+      </select>
+      <div class="row2">
+        <div>
+          <div class="field-label">Cantidad actual</div>
+          <input type="number" id="np-cant" placeholder="ej: 2" min="0" step="0.5">
+        </div>
+        <div>
+          <div class="field-label">Unidad</div>
+          <select id="np-unit">
+            <option value="unidad(es)">Unidades</option><option value="kg">Kg</option>
+            <option value="g">Gramos</option><option value="litro(s)">Litros</option>
+            <option value="ml">ml</option><option value="paquete(s)">Paquetes</option>
+            <option value="caja(s)">Cajas</option><option value="sobre(s)">Sobres</option>
+            <option value="comprimido(s)">Comprimidos</option>
+          </select>
+        </div>
+      </div>
+      <div class="row2">
+        <div>
+          <div class="field-label">Stock mínimo</div>
+          <input type="number" id="np-minimo" placeholder="ej: 1" min="0" step="0.5">
+        </div>
+        <div>
+          <div class="field-label">Vencimiento</div>
+          <input type="date" id="np-vence">
+        </div>
+      </div>
+      <div class="field-label">Estado actual</div>
+      <select id="np-estado">
+        <option value="ok">✅ Bien — tenemos suficiente</option>
+        <option value="low">⚠️ Poco — hay que comprar pronto</option>
+        <option value="out">❌ Falta — no tenemos</option>
+      </select>
+      <div class="field-label">Registrar movimiento (opcional)</div>
+      <select id="np-evento">
+        <option value="">Sin movimiento</option>
+        <option value="compra">🛒 Lo compramos</option>
+        <option value="consumo">🍽️ Lo usamos / consumimos</option>
+        <option value="vencio">🗑️ Se venció o se pudrió</option>
+        <option value="falta">📝 Nos dimos cuenta que falta</option>
+      </select>
+      <div class="field-label">Foto del producto (opcional)</div>
+      <label class="foto-btn" for="foto-input">📷 Tocar para sacar o elegir foto</label>
+      <input type="file" id="foto-input" accept="image/*" capture="environment" style="display:none" onchange="previsualizarFoto(this)">
+      <img id="foto-preview" class="foto-preview" style="display:none">
+      <div class="field-label">Notas (opcional)</div>
+      <input type="text" id="np-notas" placeholder="ej: Comprar marca X, ver precio en Disco...">
+      <button class="btn btn-primary" id="btn-guardar" onclick="guardarProducto()">Guardar</button>
+      <button class="btn btn-outline" style="margin-top:8px" onclick="limpiarForm()">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- LISTA -->
+  <div class="section" id="sec-lista">
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-num" id="cnt-out" style="color:#A32D2D">0</div><div class="stat-label">❌ Faltan</div></div>
+      <div class="stat-card"><div class="stat-num" id="cnt-low" style="color:var(--naranja)">0</div><div class="stat-label">⚠️ Poco</div></div>
+    </div>
+    <div id="lista-content"></div>
+    <div class="divider"></div>
+    <div class="section-h" style="margin-bottom:8px">
+      <div style="font-weight:700;font-size:14px">📝 Ítems manuales</div>
+      <button class="btn btn-sm btn-primary" onclick="abrirNuevoManual()">+ Agregar</button>
+    </div>
+    <p style="font-size:12px;color:var(--texto-sec);margin-bottom:10px">Cosas para comprar que no están en la despensa.</p>
+    <div class="card" style="padding:0 1.25rem" id="lista-manual-content"></div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-direction:column">
+      <button class="btn-wa" onclick="compartirWhatsApp()">📱 Compartir por WhatsApp</button>
+      <button class="btn btn-outline" onclick="abrirModoSuper()">🛒 Modo "Estoy en el super"</button>
+    </div>
+  </div>
+
+  <!-- COMIDAS -->
+  <div class="section" id="sec-comidas">
+    <div class="section-h">
+      <div class="section-h-title">🍽️ Comidas de la semana</div>
+      <button class="btn btn-sm btn-primary" onclick="abrirNuevaComida()">+ Agregar</button>
+    </div>
+    <p style="font-size:13px;color:var(--texto-sec);margin-bottom:12px">Planeá lo que van a cocinar. La app te dice si tienen todo.</p>
+    <div id="comidas-list"></div>
+  </div>
+
+  <!-- VIAJES -->
+  <div class="section" id="sec-viajes">
+    <div class="section-h">
+      <div class="section-h-title">✈️ Viajes</div>
+      <button class="btn btn-sm btn-primary" onclick="abrirNuevoViaje()">+ Agregar</button>
+    </div>
+    <p style="font-size:13px;color:var(--texto-sec);margin-bottom:12px">Marcá tus viajes y la app te avisa qué consumir antes de irte.</p>
+    <div id="viajes-list"></div>
+  </div>
+
+  <!-- HISTORIAL -->
+  <div class="section" id="sec-historial">
+    <div class="section-h"><div class="section-h-title">Últimos movimientos</div></div>
+    <div class="card" style="padding:0 1.25rem" id="historial-list"></div>
+  </div>
+
+  <!-- RECETAS -->
+  <div class="section" id="sec-recetas">
+    <div class="card">
+      <div class="card-title">¿Qué cocinamos hoy?</div>
+      <p style="font-size:13px;color:var(--texto-sec);margin-bottom:14px;line-height:1.5">Basado en lo que tenés en stock, Claude te sugiere recetas.</p>
+      <button class="btn btn-primary" onclick="pedirRecetas()">✨ Sugerirme recetas con lo que tengo</button>
+    </div>
+    <div id="recetas-result"></div>
+  </div>
+
+  <!-- DESEOS -->
+  <div class="section" id="sec-deseos">
+    <div class="section-h">
+      <div class="section-h-title">⭐ Lista de deseos</div>
+      <button class="btn btn-sm btn-primary" onclick="abrirNuevoDeseo()">+ Agregar</button>
+    </div>
+    <p style="font-size:13px;color:var(--texto-sec);margin-bottom:12px">Productos que querés probar algún día, sin urgencia.</p>
+    <div class="card" style="padding:0 1.25rem" id="deseos-list"></div>
+  </div>
+
+  <!-- INFORME -->
+  <div class="section" id="sec-informe">
+    <div id="informe-content"></div>
+    <div class="divider"></div>
+    <button class="btn btn-outline" onclick="exportarJSON()">📥 Exportar datos para análisis con Claude</button>
+    <div id="export-result" style="margin-top:10px;display:none"></div>
+  </div>
+
+  <!-- LOGROS -->
+  <div class="section" id="sec-logros">
+    <div id="logros-content"></div>
+  </div>
+</div>
+
+<!-- MODO SUPER -->
+<div id="modo-super">
+  <div class="super-header">
+    <div>
+      <div class="super-title">🛒 Estoy en el super</div>
+      <div style="font-size:12px;opacity:.8" id="super-contador">0 productos</div>
+    </div>
+    <button onclick="cerrarModoSuper()" style="background:rgba(255,255,255,.2);border:none;color:white;border-radius:10px;padding:6px 12px;font-size:14px;font-weight:700;cursor:pointer">✕</button>
+  </div>
+  <div class="super-list" id="super-list"></div>
+  <div class="super-footer">
+    <button class="btn btn-primary" style="flex:1" onclick="finalizarCompra()">✅ Terminé — actualizar stock</button>
+  </div>
+</div>
+
+<!-- MODAL EDITAR -->
+<div class="modal-overlay" id="modal-edit">
+  <div class="modal">
+    <span class="modal-handle"></span>
+    <div class="modal-header">
+      <div class="modal-title" id="modal-edit-titulo">Editar</div>
+      <button class="btn-close" onclick="cerrarModal('modal-edit')">✕</button>
+    </div>
+    <div class="field-label">Estado</div>
+    <div class="chip-row" id="chip-estado">
+      <button class="chip active" data-val="ok" onclick="selChip(this,'chip-estado')">✅ Bien</button>
+      <button class="chip" data-val="low" onclick="selChip(this,'chip-estado')">⚠️ Poco</button>
+      <button class="chip" data-val="out" onclick="selChip(this,'chip-estado')">❌ Falta</button>
+    </div>
+    <div class="field-label">Movimiento</div>
+    <div class="chip-row" id="chip-evento">
+      <button class="chip active" data-val="" onclick="selChip(this,'chip-evento')">Ninguno</button>
+      <button class="chip" data-val="compra" onclick="selChip(this,'chip-evento')">🛒 Compramos</button>
+      <button class="chip" data-val="consumo" onclick="selChip(this,'chip-evento')">🍽️ Usamos</button>
+      <button class="chip" data-val="vencio" onclick="selChip(this,'chip-evento')">🗑️ Venció</button>
+      <button class="chip" data-val="falta" onclick="selChip(this,'chip-evento')">📝 Falta</button>
+    </div>
+    <div class="row2">
+      <div><div class="field-label">Cantidad</div><input type="number" id="edit-cant" min="0" step="0.5"></div>
+      <div><div class="field-label">Vencimiento</div><input type="date" id="edit-vence"></div>
+    </div>
+    <div class="field-label">Notas</div>
+    <input type="text" id="edit-notas" placeholder="Notas...">
+    <button class="btn btn-primary" onclick="guardarEdicion()">Guardar cambios</button>
+    <button class="btn btn-danger" style="margin-top:8px" onclick="eliminarDesdeModal()">🗑️ Eliminar producto</button>
+  </div>
+</div>
+
+<!-- MODAL POST-IT -->
+<div class="modal-overlay" id="modal-postit">
+  <div class="modal">
+    <span class="modal-handle"></span>
+    <div class="modal-header">
+      <div class="modal-title">📌 Nota para el otro</div>
+      <button class="btn-close" onclick="cerrarModal('modal-postit')">✕</button>
+    </div>
+    <textarea id="postit-input" placeholder="ej: Hoy cocino yo 🍝 · Fijate si hay huevos..."></textarea>
+    <button class="btn btn-primary" onclick="guardarPostit()">Publicar nota</button>
+    <button class="btn btn-outline" style="margin-top:8px" onclick="borrarPostit()">Borrar nota</button>
+  </div>
+</div>
+
+<!-- MODAL NUEVO DESEO -->
+<div class="modal-overlay" id="modal-deseo">
+  <div class="modal">
+    <span class="modal-handle"></span>
+    <div class="modal-header">
+      <div class="modal-title">⭐ Agregar a deseos</div>
+      <button class="btn-close" onclick="cerrarModal('modal-deseo')">✕</button>
+    </div>
+    <div class="field-label">Producto</div>
+    <input type="text" id="deseo-nombre" placeholder="ej: Salsa thai, Queso manchego...">
+    <div class="field-label">Nota (opcional)</div>
+    <input type="text" id="deseo-nota" placeholder="ej: Lo vi en el mercado">
+    <button class="btn btn-primary" onclick="guardarDeseo()">Guardar</button>
+  </div>
+</div>
+
+<!-- MODAL ÍTEM MANUAL -->
+<div class="modal-overlay" id="modal-manual">
+  <div class="modal">
+    <span class="modal-handle"></span>
+    <div class="modal-header">
+      <div class="modal-title">📝 Agregar a la lista</div>
+      <button class="btn-close" onclick="cerrarModal('modal-manual')">✕</button>
+    </div>
+    <div class="field-label">Qué necesitás comprar</div>
+    <input type="text" id="manual-nombre" placeholder="ej: Cilantro, Vino tinto, Pilas AA...">
+    <div class="field-label">Cantidad (opcional)</div>
+    <input type="text" id="manual-cant" placeholder="ej: 2, 1 botella, 500g...">
+    <button class="btn btn-primary" onclick="guardarManual()">Agregar a la lista</button>
+  </div>
+</div>
+
+<!-- MODAL NUEVA COMIDA -->
+<div class="modal-overlay" id="modal-comida">
+  <div class="modal">
+    <span class="modal-handle"></span>
+    <div class="modal-header">
+      <div class="modal-title">🍽️ Planificar comida</div>
+      <button class="btn-close" onclick="cerrarModal('modal-comida')">✕</button>
+    </div>
+    <div class="field-label">Nombre de la comida *</div>
+    <input type="text" id="comida-nombre" placeholder="ej: Milanesas, Pasta bolognesa...">
+    <div class="field-label">Día (opcional)</div>
+    <select id="comida-dia">
+      <option value="">Sin día específico</option>
+      <option>Lunes</option><option>Martes</option><option>Miércoles</option>
+      <option>Jueves</option><option>Viernes</option><option>Sábado</option><option>Domingo</option>
+    </select>
+    <div class="field-label">Comida del día</div>
+    <select id="comida-momento">
+      <option value="Almuerzo">Almuerzo</option>
+      <option value="Cena">Cena</option>
+      <option value="Desayuno">Desayuno</option>
+      <option value="Merienda">Merienda</option>
+    </select>
+    <div class="field-label">Ingredientes que van a usar</div>
+    <p style="font-size:12px;color:var(--texto-sec);margin-bottom:6px">Escribí uno por línea. Si están en la despensa, la app verifica si los tenés.</p>
+    <textarea id="comida-ingr" placeholder="Carne picada&#10;Tomate&#10;Cebolla&#10;Ajo&#10;Pasta"></textarea>
+    <button class="btn btn-primary" onclick="guardarComida()">Guardar comida</button>
+  </div>
+</div>
+
+<!-- MODAL NUEVO VIAJE -->
+<div class="modal-overlay" id="modal-viaje">
+  <div class="modal">
+    <span class="modal-handle"></span>
+    <div class="modal-header">
+      <div class="modal-title">✈️ Nuevo viaje</div>
+      <button class="btn-close" onclick="cerrarModal('modal-viaje')">✕</button>
+    </div>
+    <div class="field-label">Destino *</div>
+    <input type="text" id="viaje-destino" placeholder="ej: Buenos Aires, Punta del Este...">
+    <div class="row2">
+      <div><div class="field-label">Fecha de salida *</div><input type="date" id="viaje-desde"></div>
+      <div><div class="field-label">Fecha de regreso *</div><input type="date" id="viaje-hasta"></div>
+    </div>
+    <button class="btn btn-primary" onclick="guardarViaje()">Guardar viaje</button>
+  </div>
+</div>
+
+<!-- MODAL CANTIDAD SUPER -->
+<div class="modal-overlay" id="modal-super-cant">
+  <div class="modal">
+    <span class="modal-handle"></span>
+    <div class="modal-header">
+      <div class="modal-title" id="super-cant-titulo">¿Cuánto compraste?</div>
+      <button class="btn-close" onclick="cerrarModal('modal-super-cant')">✕</button>
+    </div>
+    <p style="font-size:13px;color:var(--texto-sec);margin-bottom:12px">Ingresá la cantidad que compraste para actualizar el stock.</p>
+    <div class="field-label">Cantidad</div>
+    <input type="number" id="super-cant-valor" min="0" step="0.5" placeholder="ej: 2">
+    <div class="field-label">Unidad</div>
+    <select id="super-cant-unit">
+      <option value="unidad(es)">Unidades</option><option value="kg">Kg</option>
+      <option value="g">Gramos</option><option value="litro(s)">Litros</option>
+      <option value="ml">ml</option><option value="paquete(s)">Paquetes</option>
+      <option value="caja(s)">Cajas</option>
+    </select>
+    <button class="btn btn-primary" onclick="confirmarCantidadSuper()">Confirmar compra</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, addDoc, getDoc, serverTimestamp, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCdMfIJKbLIsiNZrjre625kg36bE-IFEUc",
+  authDomain: "despensa-monchi.firebaseapp.com",
+  projectId: "despensa-monchi",
+  storageBucket: "despensa-monchi.firebasestorage.app",
+  messagingSenderId: "521206629188",
+  appId: "1:521206629188:web:9c5f4e3640fd6cc5470d11"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const auth = getAuth(fbApp);
+const db = getFirestore(fbApp);
+
+let productos=[], eventos=[], deseos=[], manuales=[], comidas=[], viajes=[];
+let editingId=null, superItems=[], superCantId=null;
+let vistaStock='estado';
+
+// ── AUTH ──
+onAuthStateChanged(auth, user => {
+  document.getElementById('loading').style.display='none';
+  if(user){
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app-screen').style.display='block';
+    document.getElementById('user-name').textContent=user.displayName?.split(' ')[0]||user.email;
+    suscribir();
+    cargarPostit();
+  } else {
+    document.getElementById('login-screen').style.display='flex';
+    document.getElementById('app-screen').style.display='none';
+  }
+});
+
+document.getElementById('btn-login').onclick=async()=>{
+  try{ await signInWithPopup(auth,new GoogleAuthProvider()); }
+  catch(e){ toast('Error al iniciar sesión: '+e.message); }
+};
+window.logout=async()=>{ await signOut(auth); };
+
+// ── FIRESTORE ──
+function suscribir(){
+  onSnapshot(query(collection(db,'despensa'),orderBy('nombre')),snap=>{
+    productos=snap.docs.map(d=>({id:d.id,...d.data()}));
+    actualizarResumen(); renderStock(); renderLista(); renderComidas();
+  });
+  onSnapshot(query(collection(db,'eventos'),orderBy('fecha','desc'),limit(100)),snap=>{
+    eventos=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderHistorial(); renderInforme(); renderLogros();
+  });
+  onSnapshot(query(collection(db,'deseos'),orderBy('nombre')),snap=>{
+    deseos=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderDeseos();
+  });
+  onSnapshot(query(collection(db,'lista_manual'),orderBy('nombre')),snap=>{
+    manuales=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderListaManual();
+  });
+  onSnapshot(query(collection(db,'comidas'),orderBy('nombre')),snap=>{
+    comidas=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderComidas();
+  });
+  onSnapshot(query(collection(db,'viajes'),orderBy('desde')),snap=>{
+    viajes=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderViajes();
+  });
+}
+
+// ── TOAST ──
+window.toast=msg=>{
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2500);
+};
+
+// ── TABS ──
+window.showTab=t=>{
+  ['stock','agregar','lista','comidas','viajes','historial','recetas','deseos','informe','logros'].forEach(s=>{
+    document.getElementById('sec-'+s).classList.toggle('active',s===t);
+    document.getElementById('tab-'+s).classList.toggle('active',s===t);
+  });
+};
+
+// ── VISTA STOCK ──
+window.setVista=v=>{
+  vistaStock=v;
+  document.getElementById('vista-estado-btn').classList.toggle('active',v==='estado');
+  document.getElementById('vista-cat-btn').classList.toggle('active',v==='categoria');
+  renderStock();
+};
+
+// ── RESUMEN ──
+function actualizarResumen(){
+  const out=productos.filter(p=>p.estado==='out').length;
+  const low=productos.filter(p=>p.estado==='low').length;
+  const hoy=new Date(); hoy.setHours(0,0,0,0);
+  const en7=new Date(hoy); en7.setDate(en7.getDate()+7);
+  const vence=productos.filter(p=>{
+    if(!p.vencimiento) return false;
+    return new Date(p.vencimiento+'T00:00:00')<=en7;
+  }).length;
+  document.getElementById('rw-out').textContent=out;
+  document.getElementById('rw-low').textContent=low;
+  document.getElementById('rw-vence').textContent=vence;
+  document.getElementById('cnt-out').textContent=out;
+  document.getElementById('cnt-low').textContent=low;
+}
+
+window.filtrarEstado=estado=>{
+  document.getElementById('buscar').value='';
+  document.getElementById('filtro-cat').value='';
+  renderStock(estado);
+};
+
+// ── STOCK ──
+const CATS=['Almacén','Lácteos','Frutas y verduras','Carnes','Bebidas','Freezer','Limpieza','Higiene','Farmacia','Otro'];
+const CAT_ICON={'Almacén':'🥫','Lácteos':'🥛','Frutas y verduras':'🥦','Carnes':'🥩','Bebidas':'🧃','Freezer':'🧊','Limpieza':'🧹','Higiene':'🪥','Farmacia':'💊','Otro':'📦'};
+
+window.renderStock=(filtroEspecial)=>{
+  const q=(document.getElementById('buscar')?.value||'').toLowerCase();
+  const cat=document.getElementById('filtro-cat')?.value||'';
+  const hoy=new Date(); hoy.setHours(0,0,0,0);
+  const en7=new Date(hoy); en7.setDate(en7.getDate()+7);
+
+  let prods=productos.filter(p=>{
+    if(filtroEspecial==='out') return p.estado==='out';
+    if(filtroEspecial==='low') return p.estado==='low';
+    return(!q||p.nombre?.toLowerCase().includes(q))&&(!cat||p.categoria===cat);
+  }).map(p=>{
+    let e=p.estado||'ok';
+    if(p.stockMinimo&&parseFloat(p.cantidad||0)<parseFloat(p.stockMinimo)&&e==='ok') e='low';
+    const v=p.vencimiento?new Date(p.vencimiento+'T00:00:00'):null;
+    return{...p,estadoEfectivo:e,venceProximo:v&&v<=en7};
+  });
+
+  if(!prods.length){
+    document.getElementById('stock-list').innerHTML=`<div class="empty"><span class="empty-icon">📦</span><p>No hay productos.<br>Usá "Agregar" para empezar.</p></div>`;
+    return;
+  }
+
+  const cfg={out:{label:'❌ Faltan',cls:'badge-out',txt:'Falta'},low:{label:'⚠️ Poco stock',cls:'badge-low',txt:'Poco'},ok:{label:'✅ Bien',cls:'badge-ok',txt:'OK'}};
+
+  const itemHTML=p=>{
+    const vStr=p.vencimiento?`<div class="item-vence">⏰ Vence: ${fmtFecha(p.vencimiento)}${p.venceProximo?' ⚠️':''}</div>`:'';
+    const fotoStr=p.foto?`<img src="${p.foto}" class="item-foto" alt="">`:`<div class="item-foto-ph">${CAT_ICON[p.categoria]||'📦'}</div>`;
+    const e=p.estadoEfectivo||'ok';
+    return`<div class="item-row">
+      ${fotoStr}
+      <div class="item-info">
+        <div class="item-name">${p.nombre}</div>
+        <div class="item-meta">${p.categoria||''} · ${p.cantidad||'?'} ${p.unidad||''}</div>
+        ${p.notas?`<div class="item-notas">${p.notas}</div>`:''}
+        ${vStr}
+        ${p.updatePor?`<div class="item-meta" style="font-size:10px">Por ${p.updatePor}</div>`:''}
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <span class="badge ${cfg[e].cls}">${cfg[e].txt}</span>
+        <button class="btn-icon" onclick="abrirEditar('${p.id}')">✏️</button>
+      </div>
+    </div>`;
+  };
+
+  let html='';
+  if(vistaStock==='categoria'){
+    CATS.forEach(c=>{
+      const cp=prods.filter(p=>p.categoria===c);
+      if(!cp.length) return;
+      html+=`<div class="sec-label">${CAT_ICON[c]||''} ${c}</div><div class="card" style="padding:0 1.25rem">`;
+      cp.forEach(p=>{html+=itemHTML(p);});
+      html+='</div>';
+    });
+  } else {
+    const grupos={out:[],low:[],ok:[]};
+    prods.forEach(p=>grupos[p.estadoEfectivo||'ok'].push(p));
+    ['out','low','ok'].forEach(e=>{
+      if(!grupos[e].length) return;
+      html+=`<div class="sec-label">${cfg[e].label}</div><div class="card" style="padding:0 1.25rem">`;
+      grupos[e].forEach(p=>{html+=itemHTML(p);});
+      html+='</div>';
+    });
+  }
+  document.getElementById('stock-list').innerHTML=html;
+};
+
+function fmtFecha(str){
+  if(!str) return '';
+  const [y,m,d]=str.split('-');
+  return`${d}/${m}/${y}`;
+}
+
+// ── GUARDAR PRODUCTO ──
+window.guardarProducto=async()=>{
+  const nombre=document.getElementById('np-nombre').value.trim();
+  if(!nombre){ toast('Escribí el nombre del producto'); return; }
+  const btn=document.getElementById('btn-guardar');
+  btn.disabled=true; btn.textContent='Guardando...';
+  const fotoEl=document.getElementById('foto-preview');
+  const foto=(fotoEl.style.display!=='none'&&fotoEl.src)?fotoEl.src:'';
+  const datos={
+    nombre,
+    categoria:document.getElementById('np-cat').value,
+    cantidad:document.getElementById('np-cant').value||'?',
+    unidad:document.getElementById('np-unit').value,
+    stockMinimo:document.getElementById('np-minimo').value||null,
+    vencimiento:document.getElementById('np-vence').value||null,
+    estado:document.getElementById('np-estado').value,
+    notas:document.getElementById('np-notas').value.trim(),
+    foto:foto||null,
+    fechaUpdate:serverTimestamp(),
+    updatePor:auth.currentUser?.displayName?.split(' ')[0]||'?'
+  };
+  const evento=document.getElementById('np-evento').value;
+  const editId=document.getElementById('edit-id').value;
+  try{
+    if(editId){
+      await setDoc(doc(db,'despensa',editId),datos);
+    } else {
+      const existe=productos.find(p=>p.nombre.toLowerCase()===nombre.toLowerCase());
+      if(existe) await setDoc(doc(db,'despensa',existe.id),datos);
+      else await addDoc(collection(db,'despensa'),datos);
+    }
+    if(evento){
+      await addDoc(collection(db,'eventos'),{
+        producto:nombre,tipo:evento,
+        fecha:serverTimestamp(),
+        por:auth.currentUser?.displayName?.split(' ')[0]||'?'
+      });
+    }
+    limpiarForm(); toast('✅ Guardado'); showTab('stock');
+  } catch(e){
+    toast('Error: '+e.message);
+    console.error(e);
+  } finally {
+    btn.disabled=false; btn.textContent='Guardar';
+  }
+};
+
+window.limpiarForm=()=>{
+  ['np-nombre','np-cant','np-notas','np-minimo','np-vence'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('np-estado').value='ok';
+  document.getElementById('np-evento').value='';
+  document.getElementById('edit-id').value='';
+  document.getElementById('np-cat').value='Almacén';
+  document.getElementById('foto-preview').style.display='none';
+  document.getElementById('form-titulo').textContent='Agregar producto';
+};
+
+window.previsualizarFoto=input=>{
+  const file=input.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const prev=document.getElementById('foto-preview');
+    prev.src=e.target.result; prev.style.display='block';
+  };
+  reader.readAsDataURL(file);
+};
+
+// ── EDITAR ──
+window.abrirEditar=id=>{
+  editingId=id;
+  const p=productos.find(x=>x.id===id);
+  if(!p) return;
+  document.getElementById('modal-edit-titulo').textContent=p.nombre;
+  document.getElementById('edit-cant').value=p.cantidad||'';
+  document.getElementById('edit-vence').value=p.vencimiento||'';
+  document.getElementById('edit-notas').value=p.notas||'';
+  selChipVal('chip-estado',p.estado||'ok');
+  selChipVal('chip-evento','');
+  document.getElementById('modal-edit').classList.add('open');
+};
+
+window.guardarEdicion=async()=>{
+  if(!editingId) return;
+  const p=productos.find(x=>x.id===editingId);
+  const estado=document.querySelector('#chip-estado .chip.active')?.dataset.val||'ok';
+  const evento=document.querySelector('#chip-evento .chip.active')?.dataset.val||'';
+  const cantidad=document.getElementById('edit-cant').value||p.cantidad;
+  const notas=document.getElementById('edit-notas').value.trim();
+  const vencimiento=document.getElementById('edit-vence').value||p.vencimiento||null;
+  try{
+    await setDoc(doc(db,'despensa',editingId),{...p,estado,cantidad,notas,vencimiento,
+      fechaUpdate:serverTimestamp(),updatePor:auth.currentUser?.displayName?.split(' ')[0]||'?'});
+    if(evento) await addDoc(collection(db,'eventos'),{
+      producto:p.nombre,tipo:evento,fecha:serverTimestamp(),
+      por:auth.currentUser?.displayName?.split(' ')[0]||'?'});
+    cerrarModal('modal-edit'); toast('✅ Actualizado');
+  } catch(e){ toast('Error: '+e.message); }
+};
+
+window.eliminarDesdeModal=async()=>{
+  if(!editingId||!confirm('¿Eliminás este producto?')) return;
+  await deleteDoc(doc(db,'despensa',editingId));
+  cerrarModal('modal-edit'); toast('Eliminado');
+};
+
+// ── MODALES ──
+window.cerrarModal=id=>{
+  document.getElementById(id).classList.remove('open');
+  if(id==='modal-edit') editingId=null;
+};
+document.querySelectorAll('.modal-overlay').forEach(el=>{
+  el.addEventListener('click',function(e){ if(e.target===this) this.classList.remove('open'); });
+});
+
+window.selChip=(el,grupo)=>{
+  document.querySelectorAll(`#${grupo} .chip`).forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+};
+function selChipVal(grupo,val){
+  document.querySelectorAll(`#${grupo} .chip`).forEach(c=>c.classList.toggle('active',c.dataset.val===val));
+}
+
+// ── LISTA ──
+window.renderLista=()=>{
+  actualizarResumen();
+  const faltan=productos.filter(p=>p.estado==='out');
+  const poco=productos.filter(p=>p.estado==='low');
+  const cfgCat={out:'badge-out',low:'badge-low'};
+  let html='';
+  if(!faltan.length&&!poco.length){
+    html='<div class="empty"><span class="empty-icon">✅</span><p>¡La despensa está completa!</p></div>';
+  } else {
+    // Agrupar por categoría
+    const todos=[...faltan.map(p=>({...p,_tipo:'out'})),...poco.map(p=>({...p,_tipo:'low'}))];
+    const porCat={};
+    todos.forEach(p=>{
+      const c=p.categoria||'Otro';
+      if(!porCat[c]) porCat[c]=[];
+      porCat[c].push(p);
+    });
+    CATS.forEach(c=>{
+      if(!porCat[c]?.length) return;
+      html+=`<div class="sec-label">${CAT_ICON[c]||''} ${c}</div><div class="card" style="padding:0 1.25rem">`;
+      porCat[c].forEach(p=>{
+        html+=`<div class="item-row">
+          <div class="item-info">
+            <div class="item-name">${p.nombre}</div>
+            <div class="item-meta">${p.notas||''}</div>
+          </div>
+          <span class="badge ${cfgCat[p._tipo]}">${p._tipo==='out'?'Comprar':'Reponer'}</span>
+        </div>`;
+      });
+      html+='</div>';
+    });
+  }
+  document.getElementById('lista-content').innerHTML=html;
+};
+
+// ── LISTA MANUAL ──
+window.abrirNuevoManual=()=>document.getElementById('modal-manual').classList.add('open');
+
+window.guardarManual=async()=>{
+  const nombre=document.getElementById('manual-nombre').value.trim();
+  if(!nombre){ toast('Escribí qué necesitás'); return; }
+  await addDoc(collection(db,'lista_manual'),{
+    nombre,cant:document.getElementById('manual-cant').value.trim()||'',
+    fecha:serverTimestamp(),por:auth.currentUser?.displayName?.split(' ')[0]||'?'
+  });
+  ['manual-nombre','manual-cant'].forEach(id=>document.getElementById(id).value='');
+  cerrarModal('modal-manual'); toast('✅ Agregado a la lista');
+};
+
+function renderListaManual(){
+  const el=document.getElementById('lista-manual-content');
+  if(!el) return;
+  if(!manuales.length){
+    el.innerHTML='<div style="padding:12px;font-size:13px;color:var(--texto-sec);text-align:center">Nada por ahora</div>';
+    return;
+  }
+  el.innerHTML=manuales.map(m=>`
+    <div class="lista-manual-item">
+      <div class="lista-manual-nombre">${m.nombre}</div>
+      ${m.cant?`<span class="lista-manual-badge">${m.cant}</span>`:''}
+      <button class="btn-icon" onclick="borrarManual('${m.id}')" style="font-size:13px">✕</button>
+    </div>`).join('');
+}
+
+window.borrarManual=async id=>{
+  await deleteDoc(doc(db,'lista_manual',id)); toast('Eliminado');
+};
+
+// ── WHATSAPP ──
+window.compartirWhatsApp=()=>{
+  const faltan=productos.filter(p=>p.estado==='out');
+  const poco=productos.filter(p=>p.estado==='low');
+  let txt='🧅 *Lista de compras — Despensa Monchi*\n\n';
+  if(faltan.length){ txt+='❌ *Comprar sí o sí:*\n'; faltan.forEach(p=>{txt+=`• ${p.nombre}\n`;}); txt+='\n'; }
+  if(poco.length){ txt+='⚠️ *Reponer pronto:*\n'; poco.forEach(p=>{txt+=`• ${p.nombre}\n`;}); txt+='\n'; }
+  if(manuales.length){ txt+='📝 *Otros:*\n'; manuales.forEach(m=>{txt+=`• ${m.nombre}${m.cant?' ('+m.cant+')':''}\n`;}); }
+  if(!faltan.length&&!poco.length&&!manuales.length){ toast('No hay nada para comprar'); return; }
+  window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank');
+};
+
+// ── MODO SUPER ──
+window.abrirModoSuper=()=>{
+  const prods=[...productos.filter(p=>p.estado==='out'),...productos.filter(p=>p.estado==='low')];
+  const mans=manuales.map(m=>({...m,_manual:true,categoria:'📝 Lista manual'}));
+  superItems=[
+    ...prods.map(p=>({...p,checked:false,_manual:false})),
+    ...mans.map(m=>({...m,checked:false}))
+  ];
+  const el=document.getElementById('super-list');
+  const total=superItems.length;
+  document.getElementById('super-contador').textContent=`${total} producto${total!==1?'s':''} para comprar`;
+
+  if(!total){
+    el.innerHTML='<div class="empty"><span class="empty-icon">✅</span><p>¡No falta nada!</p></div>';
+    document.getElementById('modo-super').classList.add('open');
+    return;
+  }
+
+  const porCat={};
+  prods.forEach(p=>{
+    const c=p.categoria||'Otro';
+    if(!porCat[c]) porCat[c]=[];
+    porCat[c].push(p);
+  });
+
+  let html='';
+  CATS.forEach(c=>{
+    if(!porCat[c]?.length) return;
+    html+=`<div class="super-cat-label">${CAT_ICON[c]||''} ${c}</div>`;
+    porCat[c].forEach(p=>{
+      html+=`<div class="super-item" id="si-${p.id}" onclick="toggleSuper('${p.id}')">
+        <div class="super-item-check" id="sic-${p.id}"></div>
+        <div style="flex:1">
+          <div class="super-item-name">${p.nombre}</div>
+          <div class="super-item-cat">${p.notas||''}</div>
+        </div>
+      </div>`;
+    });
+  });
+
+  if(mans.length){
+    html+=`<div class="super-cat-label">📝 Lista manual</div>`;
+    mans.forEach(m=>{
+      html+=`<div class="super-item" id="si-${m.id}" onclick="toggleSuper('${m.id}')">
+        <div class="super-item-check" id="sic-${m.id}"></div>
+        <div style="flex:1">
+          <div class="super-item-name">${m.nombre}</div>
+          <div class="super-item-cat">${m.cant||''}</div>
+        </div>
+      </div>`;
+    });
+  }
+
+  el.innerHTML=html;
+  document.getElementById('modo-super').classList.add('open');
+};
+
+window.toggleSuper=id=>{
+  const item=superItems.find(x=>x.id===id);
+  if(!item) return;
+  if(item.checked){
+    // Si ya está tildado, lo destilda
+    item.checked=false;
+    const el=document.getElementById('si-'+id);
+    const chk=document.getElementById('sic-'+id);
+    const inf=document.getElementById('siq-'+id);
+    if(el) el.classList.remove('checked');
+    if(chk) chk.textContent='';
+    if(inf) inf.textContent='';
+  } else {
+    // Si no está tildado, abre modal de cantidad
+    superCantId=id;
+    document.getElementById('super-cant-titulo').textContent='¿Cuánto compraste? — '+item.nombre;
+    document.getElementById('super-cant-valor').value='';
+    document.getElementById('super-cant-unit').value=item.unidad||'unidad(es)';
+    document.getElementById('modal-super-cant').classList.add('open');
+  }
+};
+
+window.confirmarCantidadSuper=()=>{
+  if(!superCantId) return;
+  const cant=document.getElementById('super-cant-valor').value;
+  if(!cant){ toast('Ingresá la cantidad que compraste'); return; }
+  const unit=document.getElementById('super-cant-unit').value;
+  const item=superItems.find(x=>x.id===superCantId);
+  if(item){
+    item.checked=true; item.cantComprada=cant; item.unitComprada=unit;
+    const el=document.getElementById('si-'+superCantId);
+    const chk=document.getElementById('sic-'+superCantId);
+    const inf=document.getElementById('siq-'+superCantId);
+    if(el) el.classList.add('checked');
+    if(chk) chk.textContent='✓';
+    if(inf) inf.textContent=cant?`${cant} ${unit}`:'';
+  }
+  cerrarModal('modal-super-cant');
+};
+
+window.confirmarSinCantidad=()=>{
+  const item=superItems.find(x=>x.id===superCantId);
+  if(item){ item.checked=true; item.cantComprada=null; item.unitComprada=null;
+    const el=document.getElementById('si-'+superCantId);
+    const chk=document.getElementById('sic-'+superCantId);
+    if(el) el.classList.add('checked');
+    if(chk) chk.textContent='✓';
+  }
+  cerrarModal('modal-super-cant');
+};
+
+window.cerrarModoSuper=()=>document.getElementById('modo-super').classList.remove('open');
+
+window.finalizarCompra=async()=>{
+  const comprados=superItems.filter(x=>x.checked);
+  if(!comprados.length){ toast('No marcaste nada como comprado'); return; }
+  const proms=comprados.map(async item=>{
+    if(item._manual){
+      await deleteDoc(doc(db,'lista_manual',item.id));
+      return;
+    }
+    const p=productos.find(x=>x.id===item.id);
+    if(!p) return;
+    const nuevosDatos={...p,estado:'ok',
+      cantidad:item.cantComprada||p.cantidad,
+      unidad:item.unitComprada||p.unidad,
+      fechaUpdate:serverTimestamp(),
+      updatePor:auth.currentUser?.displayName?.split(' ')[0]||'?'};
+    await setDoc(doc(db,'despensa',item.id),nuevosDatos);
+    await addDoc(collection(db,'eventos'),{
+      producto:p.nombre,tipo:'compra',fecha:serverTimestamp(),
+      por:auth.currentUser?.displayName?.split(' ')[0]||'?'});
+  });
+  await Promise.all(proms);
+  cerrarModoSuper(); toast(`✅ ${comprados.length} productos actualizados`);
+};
+
+// ── POST-IT ──
+window.abrirPostit=()=>{
+  const txt=document.getElementById('postit-display').textContent;
+  document.getElementById('postit-input').value=txt.includes('Tocá')?'':txt;
+  document.getElementById('modal-postit').classList.add('open');
+};
+
+async function cargarPostit(){
+  try{
+    onSnapshot(doc(db,'config','postit'),snap=>{
+      if(snap.exists()) aplicarPostit(snap.data());
+    });
+  }catch(e){}
+}
+
+function aplicarPostit(data){
+  const el=document.getElementById('postit-display');
+  const byEl=document.getElementById('postit-by');
+  if(data.texto){ el.textContent=data.texto; el.classList.remove('vacio'); byEl.textContent=data.por||''; }
+  else { el.textContent='Tocá para dejar una nota...'; el.classList.add('vacio'); byEl.textContent=''; }
+}
+
+window.guardarPostit=async()=>{
+  const txt=document.getElementById('postit-input').value.trim();
+  await setDoc(doc(db,'config','postit'),{texto:txt,por:auth.currentUser?.displayName?.split(' ')[0]||'?',fecha:serverTimestamp()});
+  cerrarModal('modal-postit'); toast('📌 Nota publicada');
+};
+window.borrarPostit=async()=>{
+  await setDoc(doc(db,'config','postit'),{texto:'',por:'',fecha:serverTimestamp()});
+  cerrarModal('modal-postit'); toast('Nota borrada');
+};
+
+// ── COMIDAS ──
+window.abrirNuevaComida=()=>document.getElementById('modal-comida').classList.add('open');
+
+window.guardarComida=async()=>{
+  const nombre=document.getElementById('comida-nombre').value.trim();
+  if(!nombre){ toast('Escribí el nombre de la comida'); return; }
+  const ingrStr=document.getElementById('comida-ingr').value.trim();
+  const ingredientes=ingrStr?ingrStr.split('\n').map(x=>x.trim()).filter(Boolean):[];
+  await addDoc(collection(db,'comidas'),{
+    nombre,
+    dia:document.getElementById('comida-dia').value||'',
+    momento:document.getElementById('comida-momento').value||'',
+    ingredientes,
+    fecha:serverTimestamp(),
+    por:auth.currentUser?.displayName?.split(' ')[0]||'?'
+  });
+  ['comida-nombre','comida-ingr'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('comida-dia').value='';
+  cerrarModal('modal-comida'); toast('✅ Comida guardada');
+};
+
+function renderComidas(){
+  const el=document.getElementById('comidas-list');
+  if(!el) return;
+  if(!comidas.length){
+    el.innerHTML='<div class="empty"><span class="empty-icon">🍽️</span><p>No hay comidas planeadas.<br>Agregá las comidas de la semana.</p></div>';
+    return;
+  }
+  const stockNombres=productos.filter(p=>p.estado==='ok').map(p=>p.nombre.toLowerCase());
+  el.innerHTML=comidas.map(c=>{
+    const faltanIngr=c.ingredientes?.filter(i=>!stockNombres.some(s=>s.includes(i.toLowerCase())||i.toLowerCase().includes(s)))||[];
+    const tienenTodo=c.ingredientes?.length>0&&faltanIngr.length===0;
+    const estadoHTML=c.ingredientes?.length>0
+      ? tienenTodo
+        ? `<div class="comida-estado" style="color:var(--verde-dark)">✅ Tienen todo para hacerlo</div>`
+        : `<div class="comida-estado" style="color:#A32D2D">⚠️ Faltaría: ${faltanIngr.join(', ')}</div>`
+      : '';
+    return`<div class="comida-card">
+      <div class="comida-header">
+        <div>
+          <div class="comida-nombre">${c.nombre}</div>
+          <div class="comida-dia">${c.dia?c.dia+' · ':''}${c.momento||''}</div>
+        </div>
+        <button class="btn-icon" onclick="borrarComida('${c.id}')">🗑️</button>
+      </div>
+      ${c.ingredientes?.length?`<div class="comida-ingr">🧂 ${c.ingredientes.join(' · ')}</div>`:''}
+      ${estadoHTML}
+    </div>`;
+  }).join('');
+}
+
+window.borrarComida=async id=>{
+  await deleteDoc(doc(db,'comidas',id)); toast('Eliminada');
+};
+
+// ── VIAJES ──
+window.abrirNuevoViaje=()=>document.getElementById('modal-viaje').classList.add('open');
+
+window.guardarViaje=async()=>{
+  const destino=document.getElementById('viaje-destino').value.trim();
+  const desde=document.getElementById('viaje-desde').value;
+  const hasta=document.getElementById('viaje-hasta').value;
+  if(!destino||!desde||!hasta){ toast('Completá destino y fechas'); return; }
+  await addDoc(collection(db,'viajes'),{destino,desde,hasta,fecha:serverTimestamp(),por:auth.currentUser?.displayName?.split(' ')[0]||'?'});
+  ['viaje-destino','viaje-desde','viaje-hasta'].forEach(id=>document.getElementById(id).value='');
+  cerrarModal('modal-viaje'); toast('✈️ Viaje guardado');
+};
+
+function renderViajes(){
+  const el=document.getElementById('viajes-list');
+  if(!el) return;
+  if(!viajes.length){
+    el.innerHTML='<div class="empty"><span class="empty-icon">✈️</span><p>No hay viajes planeados.</p></div>';
+    return;
+  }
+  const hoy=new Date(); hoy.setHours(0,0,0,0);
+  el.innerHTML=viajes.map(v=>{
+    const desde=new Date(v.desde+'T00:00:00');
+    const hasta=new Date(v.hasta+'T00:00:00');
+    const diasHasta=Math.ceil((desde-hoy)/(1000*60*60*24));
+    const enViaje=hoy>=desde&&hoy<=hasta;
+    const pasado=hoy>hasta;
+    // Productos que vencen antes de que vuelvan
+    const alertas=productos.filter(p=>{
+      if(!p.vencimiento) return false;
+      const vence=new Date(p.vencimiento+'T00:00:00');
+      return vence>=hoy&&vence<=hasta;
+    });
+    // Productos perecederos con poco stock
+    const catsPer=['Lácteos','Frutas y verduras','Carnes'];
+    const perecederos=productos.filter(p=>catsPer.includes(p.categoria)&&p.estado==='ok');
+    return`<div class="viaje-card" style="${pasado?'opacity:.5':''}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div class="viaje-titulo">✈️ ${v.destino}</div>
+          <div class="viaje-fechas">${fmtFecha(v.desde)} → ${fmtFecha(v.hasta)}</div>
+          ${enViaje?'<div style="font-size:12px;color:var(--verde-dark);font-weight:700;margin-top:4px">🟢 Están de viaje</div>':''}
+          ${!pasado&&!enViaje&&diasHasta>=0?`<div style="font-size:12px;color:var(--azul);font-weight:600;margin-top:4px">Faltan ${diasHasta} día${diasHasta!==1?'s':''}</div>`:''}
+          ${pasado?'<div style="font-size:12px;color:var(--texto-sec);margin-top:4px">Viaje finalizado</div>':''}
+        </div>
+        <button class="btn-icon" onclick="borrarViaje('${v.id}')">🗑️</button>
+      </div>
+      ${!pasado&&alertas.length?`<div class="viaje-alerta">
+        <div class="viaje-alerta-title">⏰ Vencen antes de que vuelvan:</div>
+        ${alertas.map(p=>`<div class="viaje-alerta-item">• ${p.nombre} — vence ${fmtFecha(p.vencimiento)}</div>`).join('')}
+      </div>`:''}
+      ${!pasado&&perecederos.length?`<div class="viaje-alerta" style="background:var(--naranja-light);border-color:var(--naranja);margin-top:8px">
+        <div class="viaje-alerta-title" style="color:var(--naranja)">🥛 Consumir antes de irse:</div>
+        ${perecederos.map(p=>`<div class="viaje-alerta-item" style="color:var(--naranja)">• ${p.nombre} (${p.categoria})</div>`).join('')}
+      </div>`:''}
+    </div>`;
+  }).join('');
+}
+
+window.borrarViaje=async id=>{ await deleteDoc(doc(db,'viajes',id)); toast('Eliminado'); };
+
+// ── HISTORIAL ──
+function renderHistorial(){
+  const iconos={compra:'🛒',consumo:'🍽️',vencio:'🗑️',falta:'📝'};
+  const labels={compra:'Compraron',consumo:'Usaron',vencio:'Venció / tiraron',falta:'Falta registrado'};
+  const html=eventos.slice(0,50).map(e=>`
+    <div class="hist-row">
+      <div class="hist-icon">${iconos[e.tipo]||'📋'}</div>
+      <div class="hist-info">
+        <div class="hist-producto">${e.producto}</div>
+        <div class="hist-meta">${labels[e.tipo]||e.tipo} · ${e.por||'?'} · ${fmtTs(e.fecha)}</div>
+      </div>
+    </div>`).join('');
+  const el=document.getElementById('historial-list');
+  if(el) el.innerHTML=html||'<div class="empty"><span class="empty-icon">📋</span><p>No hay movimientos todavía.</p></div>';
+}
+
+function fmtTs(ts){
+  if(!ts) return '';
+  const d=ts.toDate?ts.toDate():new Date(ts);
+  const diff=Date.now()-d.getTime();
+  if(diff<60000) return 'ahora';
+  if(diff<3600000) return `hace ${Math.floor(diff/60000)}m`;
+  if(diff<86400000) return `hace ${Math.floor(diff/3600000)}h`;
+  return`${d.getDate()}/${d.getMonth()+1}`;
+}
+
+// ── RECETAS ──
+window.pedirRecetas=async()=>{
+  const el=document.getElementById('recetas-result');
+  el.innerHTML='<div style="text-align:center;padding:24px;color:var(--texto-sec)">✨ Consultando a Claude...</div>';
+  const disponibles=productos.filter(p=>p.estado==='ok').map(p=>p.nombre).join(', ');
+  if(!disponibles){ el.innerHTML='<div class="empty"><span class="empty-icon">🥫</span><p>No hay stock OK para sugerir recetas.</p></div>'; return; }
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,
+        messages:[{role:'user',content:`Tengo estos ingredientes disponibles: ${disponibles}. Sugerime 3 recetas simples que pueda hacer con lo que tengo. Para cada una: nombre, ingredientes de mi lista que usa, y pasos básicos en 4 líneas máximo. Responde en español rioplatense, amigable y práctico.`}]})
+    });
+    const data=await resp.json();
+    const txt=data.content?.[0]?.text||'Sin respuesta';
+    el.innerHTML=`<div class="card" style="white-space:pre-wrap;font-size:13px;line-height:1.6">${txt}</div>`;
+  } catch(e){ el.innerHTML='<div class="empty"><span class="empty-icon">⚠️</span><p>Error al consultar. Intentá de nuevo.</p></div>'; }
+};
+
+// ── DESEOS ──
+window.abrirNuevoDeseo=()=>document.getElementById('modal-deseo').classList.add('open');
+
+window.guardarDeseo=async()=>{
+  const nombre=document.getElementById('deseo-nombre').value.trim();
+  if(!nombre){ toast('Escribí el nombre'); return; }
+  await addDoc(collection(db,'deseos'),{nombre,nota:document.getElementById('deseo-nota').value.trim()||'',fecha:serverTimestamp(),por:auth.currentUser?.displayName?.split(' ')[0]||'?'});
+  ['deseo-nombre','deseo-nota'].forEach(id=>document.getElementById(id).value='');
+  cerrarModal('modal-deseo'); toast('⭐ Guardado');
+};
+
+function renderDeseos(){
+  const el=document.getElementById('deseos-list');
+  if(!el) return;
+  if(!deseos.length){ el.innerHTML='<div class="empty"><span class="empty-icon">⭐</span><p>Todavía no hay nada en deseos.</p></div>'; return; }
+  el.innerHTML=deseos.map(d=>`
+    <div class="deseo-row">
+      <div class="item-info"><div class="item-name">⭐ ${d.nombre}</div>${d.nota?`<div class="item-meta">${d.nota}</div>`:''}</div>
+      <button style="background:var(--verde-light);color:var(--verde-dark);border:none;border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit" onclick="pasarADespensa('${d.id}','${d.nombre.replace(/'/g,"\\'")}')">+ Agregar</button>
+      <button class="btn-icon" onclick="borrarDeseo('${d.id}')">🗑️</button>
+    </div>`).join('');
+}
+
+window.pasarADespensa=async(id,nombre)=>{
+  document.getElementById('np-nombre').value=nombre;
+  await deleteDoc(doc(db,'deseos',id));
+  showTab('agregar'); toast('Completá los datos');
+};
+window.borrarDeseo=async id=>{ await deleteDoc(doc(db,'deseos',id)); toast('Eliminado'); };
+
+// ── INFORME ──
+function renderInforme(){
+  const total=productos.length;
+  const faltan=productos.filter(p=>p.estado==='out').length;
+  const poco=productos.filter(p=>p.estado==='low').length;
+  const ok=productos.filter(p=>p.estado==='ok').length;
+  const conteoEvs={},conteoVenc={},conteoCompras={};
+  eventos.forEach(e=>{
+    conteoEvs[e.producto]=(conteoEvs[e.producto]||0)+1;
+    if(e.tipo==='vencio') conteoVenc[e.producto]=(conteoVenc[e.producto]||0)+1;
+    if(e.tipo==='compra') conteoCompras[e.producto]=(conteoCompras[e.producto]||0)+1;
+  });
+  const top5=(obj)=>Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  let html=`<div class="stat-grid">
+    <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">Productos</div></div>
+    <div class="stat-card"><div class="stat-num">${eventos.length}</div><div class="stat-label">Movimientos</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--verde-dark)">${ok}</div><div class="stat-label">Stock OK</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:#A32D2D">${faltan+poco}</div><div class="stat-label">Para comprar</div></div>
+  </div>`;
+  const topMov=top5(conteoEvs);
+  const topVenc=top5(conteoVenc);
+  const topCom=top5(conteoCompras);
+  if(topMov.length){
+    html+=`<div class="report-block"><div class="report-title">🔥 Más movimiento</div>${topMov.map(([n,c])=>`<div class="report-row"><span>${n}</span><span>${c} reg.</span></div>`).join('')}<div class="tip">💡 Tené siempre stock de estos.</div></div>`;
+  }
+  if(topVenc.length){
+    html+=`<div class="report-block"><div class="report-title">🗑️ Más veces tirados o vencidos</div>${topVenc.map(([n,c])=>`<div class="report-row"><span>${n}</span><span style="color:#A32D2D">${c} veces</span></div>`).join('')}<div class="tip">💡 Comprá menos de estos o en porciones más chicas.</div></div>`;
+  }
+  if(topCom.length){
+    html+=`<div class="report-block"><div class="report-title">🛒 Lo que más compramos</div>${topCom.map(([n,c])=>`<div class="report-row"><span>${n}</span><span>${c} compras</span></div>`).join('')}<div class="tip">💡 Conviene comprarlos al por mayor cuando hay oferta.</div></div>`;
+  }
+  if(!total) html='<div class="empty"><span class="empty-icon">📊</span><p>Todavía no hay datos.</p></div>';
+  const el=document.getElementById('informe-content');
+  if(el) el.innerHTML=html;
+}
+
+// ── LOGROS ──
+function renderLogros(){
+  const venc=eventos.filter(e=>e.tipo==='vencio').length;
+  const comp=eventos.filter(e=>e.tipo==='compra').length;
+  const tot=productos.length;
+  const logros=[
+    {icon:'🌟',t:'Primeros pasos',d:'Registraste tu primer producto',ok:tot>=1},
+    {icon:'🏠',t:'Casa organizada',d:'10 o más productos registrados',ok:tot>=10},
+    {icon:'💪',t:'Despensa completa',d:'25 o más productos cargados',ok:tot>=25},
+    {icon:'🛒',t:'Comprador frecuente',d:'10 o más compras registradas',ok:comp>=10},
+    {icon:'♻️',t:'Cero desperdicio',d:'No tiraron nada todavía',ok:venc===0&&eventos.length>0},
+    {icon:'🍽️',t:'Planificadores',d:'Comidas planeadas para la semana',ok:comidas.length>=3},
+    {icon:'✈️',t:'Viajeros organizados',d:'Registraron un viaje',ok:viajes.length>=1},
+    {icon:'🏆',t:'Maestros del hogar',d:'50 movimientos registrados',ok:eventos.length>=50},
+  ];
+  const obt=logros.filter(l=>l.ok), pend=logros.filter(l=>!l.ok);
+  let html='';
+  if(obt.length){
+    html+=`<div class="sec-label">🏆 Obtenidos (${obt.length})</div><div class="card" style="padding:0 1.25rem">`;
+    obt.forEach(l=>{html+=`<div class="logro-item"><div class="logro-icon">${l.icon}</div><div><div class="logro-titulo">${l.t}</div><div class="logro-desc">${l.d}</div></div><span style="background:var(--verde-light);color:var(--verde-dark);font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">✅</span></div>`;});
+    html+='</div>';
+  }
+  if(pend.length){
+    html+=`<div class="sec-label">🔒 Por desbloquear</div><div class="card" style="padding:0 1.25rem">`;
+    pend.forEach(l=>{html+=`<div class="logro-item" style="opacity:.4"><div class="logro-icon">${l.icon}</div><div><div class="logro-titulo">${l.t}</div><div class="logro-desc">${l.d}</div></div><span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:var(--bg-sec);color:var(--texto-sec)">🔒</span></div>`;});
+    html+='</div>';
+  }
+  if(!eventos.length&&!tot) html='<div class="empty"><span class="empty-icon">🏆</span><p>Empezá a usar la app para desbloquear logros.</p></div>';
+  const el=document.getElementById('logros-content');
+  if(el) el.innerHTML=html;
+}
+
+// ── EXPORTAR ──
+window.exportarJSON=()=>{
+  const resumen={
+    fecha:new Date().toLocaleString('es-UY'),
+    totalProductos:productos.length,
+    productos:productos.map(p=>({nombre:p.nombre,categoria:p.categoria,estado:p.estado,cantidad:p.cantidad,unidad:p.unidad,stockMinimo:p.stockMinimo||null,vencimiento:p.vencimiento||null,notas:p.notas||''})),
+    totalMovimientos:eventos.length,
+    movimientos:eventos.slice(0,50).map(e=>({producto:e.producto,tipo:e.tipo,por:e.por||'?'})),
+    paraComprar:productos.filter(p=>p.estado==='out'||p.estado==='low').map(p=>p.nombre),
+    comidasSemana:comidas.map(c=>({nombre:c.nombre,dia:c.dia,ingredientes:c.ingredientes})),
+    viajesProximos:viajes.map(v=>({destino:v.destino,desde:v.desde,hasta:v.hasta})),
+    deseos:deseos.map(d=>d.nombre)
+  };
+  const json=JSON.stringify(resumen,null,2);
+  const box=document.getElementById('export-result');
+  box.style.display='block';
+  box.innerHTML=`<p style="font-size:12px;color:var(--texto-sec);margin-bottom:8px">Copiá y pegáselo a Claude para el análisis:</p>
+    <textarea class="export-area" readonly>${json}</textarea>
+    <button class="btn btn-primary" style="margin-top:8px" onclick="navigator.clipboard.writeText(${JSON.stringify(json)}).then(()=>toast('✅ Copiado'))">Copiar al portapapeles</button>`;
+};
+</script>
+</body>
+</html>
