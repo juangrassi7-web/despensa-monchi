@@ -230,8 +230,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--verde);b
   <div class="tabs">
     <div class="tab active" onclick="showTab('stock')" id="tab-stock"><span class="ti">🏠</span>Despensa</div>
     <div class="tab" onclick="showTab('agregar')" id="tab-agregar"><span class="ti">➕</span>Agregar</div>
+    <div class="tab" onclick="showTab('usamos')" id="tab-usamos"><span class="ti">🍽️</span>Usamos</div>
     <div class="tab" onclick="showTab('lista')" id="tab-lista"><span class="ti">🛒</span>Lista</div>
-    <div class="tab" onclick="showTab('comidas')" id="tab-comidas"><span class="ti">🍽️</span>Comidas</div>
+    <div class="tab" onclick="showTab('comidas')" id="tab-comidas"><span class="ti">📅</span>Comidas</div>
     <div class="tab" onclick="showTab('viajes')" id="tab-viajes"><span class="ti">✈️</span>Viajes</div>
     <div class="tab" onclick="showTab('historial')" id="tab-historial"><span class="ti">📋</span>Historial</div>
     <div class="tab" onclick="showTab('recetas')" id="tab-recetas"><span class="ti">🍳</span>Recetas</div>
@@ -319,6 +320,44 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--verde);b
       <input type="text" id="np-notas" placeholder="ej: Comprar marca X, ver precio en Disco...">
       <button class="btn btn-primary" id="btn-guardar" onclick="guardarProducto()">Guardar</button>
       <button class="btn btn-outline" style="margin-top:8px" onclick="limpiarForm()">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- USAMOS -->
+  <div class="section" id="sec-usamos">
+    <div class="card">
+      <div class="card-title">¿Qué usaron o qué pasó?</div>
+      <div class="field-label">Producto *</div>
+      <select id="usamos-prod">
+        <option value="">— Elegí un producto —</option>
+      </select>
+      <div id="usamos-stock-actual" style="font-size:12px;color:var(--texto-sec);margin-top:-6px;margin-bottom:10px"></div>
+      <div class="field-label">Qué pasó *</div>
+      <div class="chip-row" id="chip-usamos-tipo">
+        <button class="chip active" data-val="consumo" onclick="selChip(this,'chip-usamos-tipo')">🍽️ Lo usamos</button>
+        <button class="chip" data-val="vencio" onclick="selChip(this,'chip-usamos-tipo')">🗑️ Se venció</button>
+        <button class="chip" data-val="pudrio" onclick="selChip(this,'chip-usamos-tipo')">🤢 Se pudrió</button>
+      </div>
+      <div class="row2">
+        <div>
+          <div class="field-label">Cantidad usada *</div>
+          <input type="number" id="usamos-cant" placeholder="ej: 1" min="0" step="0.5" oninput="previsualizarResto()">
+        </div>
+        <div>
+          <div class="field-label">Unidad</div>
+          <select id="usamos-unit">
+            <option value="unidad(es)">Unidades</option><option value="kg">Kg</option>
+            <option value="g">Gramos</option><option value="litro(s)">Litros</option>
+            <option value="ml">ml</option><option value="paquete(s)">Paquetes</option>
+            <option value="caja(s)">Cajas</option><option value="sobre(s)">Sobres</option>
+            <option value="comprimido(s)">Comprimidos</option>
+          </select>
+        </div>
+      </div>
+      <div id="usamos-resto-preview" style="font-size:13px;font-weight:600;margin-bottom:12px;padding:8px 12px;background:var(--bg-sec);border-radius:8px;display:none"></div>
+      <div class="field-label">Nota (opcional)</div>
+      <input type="text" id="usamos-nota" placeholder="ej: Se pudrió porque lo dejamos mucho...">
+      <button class="btn btn-primary" onclick="registrarUsamos()">Registrar</button>
     </div>
   </div>
 
@@ -562,6 +601,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--verde);b
       <option value="ml">ml</option><option value="paquete(s)">Paquetes</option>
       <option value="caja(s)">Cajas</option>
     </select>
+    <div class="field-label">Fecha de vencimiento (opcional)</div>
+    <p style="font-size:12px;color:var(--texto-sec);margin-bottom:6px">Si este producto vence, anotá la fecha del envase que compraste.</p>
+    <input type="date" id="super-cant-vence">
     <button class="btn btn-primary" onclick="confirmarCantidadSuper()">Confirmar compra</button>
   </div>
 </div>
@@ -648,10 +690,11 @@ window.toast=msg=>{
 
 // ── TABS ──
 window.showTab=t=>{
-  ['stock','agregar','lista','comidas','viajes','historial','recetas','deseos','informe','logros'].forEach(s=>{
+  ['stock','agregar','usamos','lista','comidas','viajes','historial','recetas','deseos','informe','logros'].forEach(s=>{
     document.getElementById('sec-'+s).classList.toggle('active',s===t);
     document.getElementById('tab-'+s).classList.toggle('active',s===t);
   });
+  if(t==='usamos') cargarSelectUsamos();
 };
 
 // ── VISTA STOCK ──
@@ -714,8 +757,23 @@ window.renderStock=(filtroEspecial)=>{
   const cfg={out:{label:'❌ Faltan',cls:'badge-out',txt:'Falta'},low:{label:'⚠️ Poco stock',cls:'badge-low',txt:'Poco'},ok:{label:'✅ Bien',cls:'badge-ok',txt:'OK'}};
 
   const itemHTML=p=>{
-    const vStr=p.vencimiento?`<div class="item-vence">⏰ Vence: ${fmtFecha(p.vencimiento)}${p.venceProximo?' ⚠️':''}</div>`:'';
-    const fotoStr=p.foto?`<img src="${p.foto}" class="item-foto" alt="">`:`<div class="item-foto-ph">${CAT_ICON[p.categoria]||'📦'}</div>`;
+    // Mostrar lotes de vencimiento
+    let vStr='';
+    if(p.lotes&&p.lotes.length>0){
+      const hoy=new Date(); hoy.setHours(0,0,0,0);
+      const en7=new Date(hoy); en7.setDate(en7.getDate()+7);
+      vStr=p.lotes.map(l=>{
+        const v=new Date(l.fecha+'T00:00:00');
+        const proximo=v<=en7;
+        return`<div class="item-vence" style="${proximo?'color:#A32D2D':''}">⏰ ${l.cantidad} ${p.unidad||''} vence ${fmtFecha(l.fecha)}${proximo?' ⚠️':''}</div>`;
+      }).join('');
+    } else if(p.vencimiento){
+      const v=new Date(p.vencimiento+'T00:00:00');
+      const hoy=new Date(); hoy.setHours(0,0,0,0);
+      const en7=new Date(hoy); en7.setDate(en7.getDate()+7);
+      const proximo=v<=en7;
+      vStr=`<div class="item-vence" style="${proximo?'color:#A32D2D':''}">⏰ Vence: ${fmtFecha(p.vencimiento)}${proximo?' ⚠️':''}</div>`;
+    }    const fotoStr=p.foto?`<img src="${p.foto}" class="item-foto" alt="">`:`<div class="item-foto-ph">${CAT_ICON[p.categoria]||'📦'}</div>`;
     const e=p.estadoEfectivo||'ok';
     return`<div class="item-row">
       ${fotoStr}
@@ -1052,24 +1110,15 @@ window.confirmarCantidadSuper=()=>{
   const item=superItems.find(x=>x.id===superCantId);
   if(item){
     item.checked=true; item.cantComprada=cant; item.unitComprada=unit;
+    item.venceComprada=document.getElementById('super-cant-vence').value||null;
     const el=document.getElementById('si-'+superCantId);
     const chk=document.getElementById('sic-'+superCantId);
     const inf=document.getElementById('siq-'+superCantId);
     if(el) el.classList.add('checked');
     if(chk) chk.textContent='✓';
-    if(inf) inf.textContent=cant?`${cant} ${unit}`:'';
+    if(inf) inf.textContent=cant?`${cant} ${unit}${item.venceComprada?' · vence '+fmtFecha(item.venceComprada):''}` :'';
   }
-  cerrarModal('modal-super-cant');
-};
-
-window.confirmarSinCantidad=()=>{
-  const item=superItems.find(x=>x.id===superCantId);
-  if(item){ item.checked=true; item.cantComprada=null; item.unitComprada=null;
-    const el=document.getElementById('si-'+superCantId);
-    const chk=document.getElementById('sic-'+superCantId);
-    if(el) el.classList.add('checked');
-    if(chk) chk.textContent='✓';
-  }
+  document.getElementById('super-cant-vence').value='';
   cerrarModal('modal-super-cant');
 };
 
@@ -1085,14 +1134,38 @@ window.finalizarCompra=async()=>{
     }
     const p=productos.find(x=>x.id===item.id);
     if(!p) return;
-    const nuevosDatos={...p,estado:'ok',
-      cantidad:item.cantComprada||p.cantidad,
+    // Manejo de lotes
+    const lotesActuales=p.lotes||[];
+    const cantComprada=parseFloat(item.cantComprada)||0;
+    if(item.venceComprada && cantComprada>0){
+      // Agregar nuevo lote
+      lotesActuales.push({fecha:item.venceComprada, cantidad:cantComprada});
+      lotesActuales.sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+    }
+    // Calcular cantidad total sumando todos los lotes + lo que no tiene lote
+    const cantSinLote=parseFloat(p.cantSinLote||0);
+    const cantLotes=lotesActuales.reduce((s,l)=>s+parseFloat(l.cantidad||0),0);
+    const cantTotal=item.venceComprada
+      ? cantLotes + cantSinLote
+      : (parseFloat(p.cantidad)||0) + cantComprada;
+    // Fecha de vencimiento más próxima
+    const vencProximo=lotesActuales.length>0?lotesActuales[0].fecha:p.vencimiento||null;
+    const nuevosDatos={
+      ...p,
+      estado:'ok',
+      cantidad:String(cantTotal),
+      cantSinLote:item.venceComprada?cantSinLote:String((parseFloat(p.cantSinLote||p.cantidad||0))+cantComprada),
       unidad:item.unitComprada||p.unidad,
+      lotes:lotesActuales,
+      vencimiento:vencProximo,
       fechaUpdate:serverTimestamp(),
-      updatePor:auth.currentUser?.displayName?.split(' ')[0]||'?'};
+      updatePor:auth.currentUser?.displayName?.split(' ')[0]||'?'
+    };
     await setDoc(doc(db,'despensa',item.id),nuevosDatos);
     await addDoc(collection(db,'eventos'),{
-      producto:p.nombre,tipo:'compra',fecha:serverTimestamp(),
+      producto:p.nombre,tipo:'compra',cantidad:cantComprada,
+      vencimiento:item.venceComprada||null,
+      fecha:serverTimestamp(),
       por:auth.currentUser?.displayName?.split(' ')[0]||'?'});
   });
   await Promise.all(proms);
@@ -1388,6 +1461,123 @@ function renderLogros(){
   const el=document.getElementById('logros-content');
   if(el) el.innerHTML=html;
 }
+
+// ── USAMOS ──
+function cargarSelectUsamos(){
+  const sel=document.getElementById('usamos-prod');
+  const val=sel.value;
+  sel.innerHTML='<option value="">— Elegí un producto —</option>';
+  [...productos].sort((a,b)=>a.nombre.localeCompare(b.nombre)).forEach(p=>{
+    const op=document.createElement('option');
+    op.value=p.id;
+    op.textContent=`${p.nombre} (${p.cantidad||'?'} ${p.unidad||''})`;
+    sel.appendChild(op);
+  });
+  if(val) sel.value=val;
+  mostrarStockActual();
+}
+
+document.addEventListener('change',e=>{
+  if(e.target.id==='usamos-prod') mostrarStockActual();
+});
+
+function mostrarStockActual(){
+  const sel=document.getElementById('usamos-prod');
+  const el=document.getElementById('usamos-stock-actual');
+  const prev=document.getElementById('usamos-resto-preview');
+  if(!sel.value){ el.textContent=''; prev.style.display='none'; return; }
+  const p=productos.find(x=>x.id===sel.value);
+  if(!p){ el.textContent=''; return; }
+  el.textContent=`Stock actual: ${p.cantidad||'?'} ${p.unidad||''}`;
+  document.getElementById('usamos-unit').value=p.unidad||'unidad(es)';
+  previsualizarResto();
+}
+
+window.previsualizarResto=()=>{
+  const sel=document.getElementById('usamos-prod');
+  const prev=document.getElementById('usamos-resto-preview');
+  if(!sel.value){ prev.style.display='none'; return; }
+  const p=productos.find(x=>x.id===sel.value);
+  if(!p){ prev.style.display='none'; return; }
+  const cantUsada=parseFloat(document.getElementById('usamos-cant').value||0);
+  if(!cantUsada){ prev.style.display='none'; return; }
+  const cantActual=parseFloat(p.cantidad)||0;
+  const resto=cantActual-cantUsada;
+  let color=resto>0?'var(--verde-dark)':resto===0?'var(--naranja)':'#A32D2D';
+  let msg=resto>0?`Quedaría: ${resto} ${p.unidad||''}`:resto===0?'Quedaría en 0 → se marcará como ❌ Falta':'Cantidad negativa — revisá el número';
+  prev.style.display='block';
+  prev.style.color=color;
+  prev.textContent=msg;
+};
+
+window.registrarUsamos=async()=>{
+  const sel=document.getElementById('usamos-prod');
+  if(!sel.value){ toast('Elegí un producto'); return; }
+  const cantUsada=parseFloat(document.getElementById('usamos-cant').value);
+  if(!cantUsada||cantUsada<=0){ toast('Ingresá la cantidad usada'); return; }
+  const p=productos.find(x=>x.id===sel.value);
+  if(!p){ toast('Producto no encontrado'); return; }
+  const tipo=document.querySelector('#chip-usamos-tipo .chip.active')?.dataset.val||'consumo';
+  const nota=document.getElementById('usamos-nota').value.trim();
+  const cantActual=parseFloat(p.cantidad)||0;
+  const resto=Math.max(0, cantActual-cantUsada);
+
+  // Descontar de lotes en orden (el más viejo primero)
+  let lotes=[...(p.lotes||[])].map(l=>({...l,cantidad:parseFloat(l.cantidad||0)}));
+  let cantSinLote=parseFloat(p.cantSinLote||0);
+  let porDescontar=cantUsada;
+
+  // Primero descontar de lotes (más viejo primero)
+  for(let i=0;i<lotes.length&&porDescontar>0;i++){
+    const desc=Math.min(lotes[i].cantidad, porDescontar);
+    lotes[i].cantidad-=desc;
+    porDescontar-=desc;
+  }
+  // Lo que sobra descontarlo de cantSinLote
+  if(porDescontar>0){
+    cantSinLote=Math.max(0, cantSinLote-porDescontar);
+  }
+  // Eliminar lotes vacíos
+  lotes=lotes.filter(l=>l.cantidad>0).map(l=>({...l,cantidad:String(l.cantidad)}));
+
+  // Nuevo vencimiento más próximo
+  const vencProximo=lotes.length>0?lotes[0].fecha:null;
+
+  // Determinar nuevo estado
+  const tiposVencio=['vencio','pudrio'];
+  let nuevoEstado='ok';
+  if(resto===0||tiposVencio.includes(tipo)) nuevoEstado='out';
+  else if(p.stockMinimo&&resto<parseFloat(p.stockMinimo)) nuevoEstado='low';
+
+  try{
+    await setDoc(doc(db,'despensa',p.id),{
+      ...p,
+      cantidad:String(resto),
+      cantSinLote:String(cantSinLote),
+      lotes,
+      vencimiento:vencProximo,
+      estado:nuevoEstado,
+      fechaUpdate:serverTimestamp(),
+      updatePor:auth.currentUser?.displayName?.split(' ')[0]||'?'
+    });
+    const labelTipo={consumo:'consumo',vencio:'vencio',pudrio:'vencio'}[tipo]||'consumo';
+    await addDoc(collection(db,'eventos'),{
+      producto:p.nombre,tipo:labelTipo,cantUsada,
+      unidad:p.unidad||'',nota:nota||'',
+      fecha:serverTimestamp(),
+      por:auth.currentUser?.displayName?.split(' ')[0]||'?'
+    });
+    sel.value='';
+    document.getElementById('usamos-cant').value='';
+    document.getElementById('usamos-nota').value='';
+    document.getElementById('usamos-stock-actual').textContent='';
+    document.getElementById('usamos-resto-preview').style.display='none';
+    selChipVal('chip-usamos-tipo','consumo');
+    const msgs={consumo:`✅ Registrado — quedan ${resto} ${p.unidad||''}`,vencio:'🗑️ Registrado como vencido',pudrio:'🤢 Registrado como podrido'};
+    toast(msgs[tipo]||'✅ Registrado');
+    if(nuevoEstado==='out') setTimeout(()=>toast(`⚠️ ${p.nombre} quedó en 0 — aparece en lista de compras`),2600);
+  } catch(e){ toast('Error: '+e.message); }
+};
 
 // ── EXPORTAR ──
 window.exportarJSON=()=>{
