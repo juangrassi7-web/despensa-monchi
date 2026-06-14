@@ -328,10 +328,12 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--verde);b
     <div class="card">
       <div class="card-title">¿Qué usaron o qué pasó?</div>
       <div class="field-label">Producto *</div>
-      <select id="usamos-prod">
-        <option value="">— Elegí un producto —</option>
-      </select>
-      <div id="usamos-stock-actual" style="font-size:12px;color:var(--texto-sec);margin-top:-6px;margin-bottom:10px"></div>
+      <div style="position:relative;margin-bottom:10px">
+        <input type="text" id="usamos-buscar" placeholder="Escribí para buscar..." autocomplete="off" oninput="filtrarUsamos()" style="margin-bottom:0" onfocus="filtrarUsamos()">
+        <input type="hidden" id="usamos-prod">
+        <div id="usamos-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg);border:0.5px solid var(--verde);border-radius:0 0 var(--radio-sm) var(--radio-sm);z-index:30;max-height:220px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.15)"></div>
+      </div>
+      <div id="usamos-stock-actual" style="font-size:12px;color:var(--texto-sec);margin-bottom:10px"></div>
       <div class="field-label">Qué pasó *</div>
       <div class="chip-row" id="chip-usamos-tipo">
         <button class="chip active" data-val="consumo" onclick="selChip(this,'chip-usamos-tipo')">🍽️ Lo usamos</button>
@@ -1464,40 +1466,68 @@ function renderLogros(){
 
 // ── USAMOS ──
 function cargarSelectUsamos(){
-  const sel=document.getElementById('usamos-prod');
-  const val=sel.value;
-  sel.innerHTML='<option value="">— Elegí un producto —</option>';
-  [...productos].sort((a,b)=>a.nombre.localeCompare(b.nombre)).forEach(p=>{
-    const op=document.createElement('option');
-    op.value=p.id;
-    op.textContent=`${p.nombre} (${p.cantidad||'?'} ${p.unidad||''})`;
-    sel.appendChild(op);
-  });
-  if(val) sel.value=val;
-  mostrarStockActual();
+  // Solo limpiar selección al entrar a la pestaña
+  document.getElementById('usamos-buscar').value='';
+  document.getElementById('usamos-prod').value='';
+  document.getElementById('usamos-stock-actual').textContent='';
+  document.getElementById('usamos-resto-preview').style.display='none';
+  document.getElementById('usamos-dropdown').style.display='none';
 }
 
-document.addEventListener('change',e=>{
-  if(e.target.id==='usamos-prod') mostrarStockActual();
+window.filtrarUsamos=()=>{
+  const q=document.getElementById('usamos-buscar').value.toLowerCase().trim();
+  const dd=document.getElementById('usamos-dropdown');
+  if(!q){ dd.style.display='none'; return; }
+  const matches=productos.filter(p=>p.nombre.toLowerCase().includes(q)).slice(0,8);
+  if(!matches.length){ dd.style.display='none'; return; }
+  dd.innerHTML=matches.map(p=>`
+    <div onclick="seleccionarProductoUsamos('${p.id}')"
+      style="padding:10px 14px;cursor:pointer;border-bottom:0.5px solid var(--borde);font-size:14px;display:flex;justify-content:space-between;align-items:center"
+      onmouseover="this.style.background='var(--bg-sec)'" onmouseout="this.style.background=''">
+      <span><strong>${p.nombre}</strong> <span style="font-size:12px;color:var(--texto-sec)">${p.categoria||''}</span></span>
+      <span style="font-size:12px;color:var(--texto-sec)">${p.cantidad||'?'} ${p.unidad||''}</span>
+    </div>`).join('');
+  dd.style.display='block';
+};
+
+window.seleccionarProductoUsamos=id=>{
+  const p=productos.find(x=>x.id===id);
+  if(!p) return;
+  document.getElementById('usamos-buscar').value=p.nombre;
+  document.getElementById('usamos-prod').value=id;
+  document.getElementById('usamos-dropdown').style.display='none';
+  document.getElementById('usamos-unit').value=p.unidad||'unidad(es)';
+  mostrarStockActual();
+};
+
+// Cerrar dropdown al tocar fuera
+document.addEventListener('click',e=>{
+  if(!e.target.closest('#usamos-buscar')&&!e.target.closest('#usamos-dropdown')){
+    const dd=document.getElementById('usamos-dropdown');
+    if(dd) dd.style.display='none';
+  }
 });
 
 function mostrarStockActual(){
-  const sel=document.getElementById('usamos-prod');
+  const id=document.getElementById('usamos-prod').value;
   const el=document.getElementById('usamos-stock-actual');
   const prev=document.getElementById('usamos-resto-preview');
-  if(!sel.value){ el.textContent=''; prev.style.display='none'; return; }
-  const p=productos.find(x=>x.id===sel.value);
+  if(!id){ el.textContent=''; prev.style.display='none'; return; }
+  const p=productos.find(x=>x.id===id);
   if(!p){ el.textContent=''; return; }
-  el.textContent=`Stock actual: ${p.cantidad||'?'} ${p.unidad||''}`;
-  document.getElementById('usamos-unit').value=p.unidad||'unidad(es)';
+  let stockTxt=`Stock actual: ${p.cantidad||'?'} ${p.unidad||''}`;
+  if(p.lotes&&p.lotes.length>0){
+    stockTxt+=` · Lotes: ${p.lotes.map(l=>`${l.cantidad} (vence ${fmtFecha(l.fecha)})`).join(', ')}`;
+  }
+  el.textContent=stockTxt;
   previsualizarResto();
 }
 
 window.previsualizarResto=()=>{
-  const sel=document.getElementById('usamos-prod');
+  const id=document.getElementById('usamos-prod').value;
   const prev=document.getElementById('usamos-resto-preview');
-  if(!sel.value){ prev.style.display='none'; return; }
-  const p=productos.find(x=>x.id===sel.value);
+  if(!id){ prev.style.display='none'; return; }
+  const p=productos.find(x=>x.id===id);
   if(!p){ prev.style.display='none'; return; }
   const cantUsada=parseFloat(document.getElementById('usamos-cant').value||0);
   if(!cantUsada){ prev.style.display='none'; return; }
@@ -1511,11 +1541,11 @@ window.previsualizarResto=()=>{
 };
 
 window.registrarUsamos=async()=>{
-  const sel=document.getElementById('usamos-prod');
-  if(!sel.value){ toast('Elegí un producto'); return; }
+  const id=document.getElementById('usamos-prod').value;
+  if(!id){ toast('Elegí un producto'); return; }
   const cantUsada=parseFloat(document.getElementById('usamos-cant').value);
   if(!cantUsada||cantUsada<=0){ toast('Ingresá la cantidad usada'); return; }
-  const p=productos.find(x=>x.id===sel.value);
+  const p=productos.find(x=>x.id===id);
   if(!p){ toast('Producto no encontrado'); return; }
   const tipo=document.querySelector('#chip-usamos-tipo .chip.active')?.dataset.val||'consumo';
   const nota=document.getElementById('usamos-nota').value.trim();
@@ -1567,7 +1597,8 @@ window.registrarUsamos=async()=>{
       fecha:serverTimestamp(),
       por:auth.currentUser?.displayName?.split(' ')[0]||'?'
     });
-    sel.value='';
+    document.getElementById('usamos-buscar').value='';
+    document.getElementById('usamos-prod').value='';
     document.getElementById('usamos-cant').value='';
     document.getElementById('usamos-nota').value='';
     document.getElementById('usamos-stock-actual').textContent='';
