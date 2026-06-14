@@ -208,6 +208,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--verde);b
     <span style="font-size:10px;color:var(--texto-sec)" id="postit-by"></span>
   </div>
 
+  <!-- ALERTA VENCIMIENTO -->
+  <div id="alerta-vencimiento" style="display:none;background:var(--rojo-light);border-bottom:0.5px solid var(--rojo);padding:10px 16px;gap:10px;align-items:center"></div>
+
   <div class="rw">
     <div class="rw-item" onclick="showTab('stock');filtrarEstado('out')">
       <div class="rw-num" style="color:#A32D2D" id="rw-out">0</div>
@@ -217,7 +220,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--verde);b
       <div class="rw-num" style="color:var(--naranja)" id="rw-low">0</div>
       <div class="rw-label">⚠️ Poco</div>
     </div>
-    <div class="rw-item" onclick="showTab('stock')">
+    <div class="rw-item" onclick="showTab('stock');filtrarEstado('vence')">
       <div class="rw-num" style="color:var(--morado)" id="rw-vence">0</div>
       <div class="rw-label">⏰ Vencen</div>
     </div>
@@ -712,16 +715,47 @@ function actualizarResumen(){
   const out=productos.filter(p=>p.estado==='out').length;
   const low=productos.filter(p=>p.estado==='low').length;
   const hoy=new Date(); hoy.setHours(0,0,0,0);
+  const en5=new Date(hoy); en5.setDate(en5.getDate()+5);
   const en7=new Date(hoy); en7.setDate(en7.getDate()+7);
-  const vence=productos.filter(p=>{
-    if(!p.vencimiento) return false;
-    return new Date(p.vencimiento+'T00:00:00')<=en7;
+
+  // Productos que vencen en 5 días o menos
+  const porVencer=productos.filter(p=>{
+    const fechas=[];
+    if(p.lotes?.length) p.lotes.forEach(l=>fechas.push(l.fecha));
+    else if(p.vencimiento) fechas.push(p.vencimiento);
+    return fechas.some(f=>{ const v=new Date(f+'T00:00:00'); return v>=hoy&&v<=en5; });
+  });
+
+  // Contador widget (muestra hasta 7 días)
+  const vence7=productos.filter(p=>{
+    const fechas=[];
+    if(p.lotes?.length) p.lotes.forEach(l=>fechas.push(l.fecha));
+    else if(p.vencimiento) fechas.push(p.vencimiento);
+    return fechas.some(f=>{ const v=new Date(f+'T00:00:00'); return v>=hoy&&v<=en7; });
   }).length;
+
   document.getElementById('rw-out').textContent=out;
   document.getElementById('rw-low').textContent=low;
-  document.getElementById('rw-vence').textContent=vence;
+  document.getElementById('rw-vence').textContent=vence7;
   document.getElementById('cnt-out').textContent=out;
   document.getElementById('cnt-low').textContent=low;
+
+  // Alerta de vencimiento próximo (5 días)
+  const alertaEl=document.getElementById('alerta-vencimiento');
+  if(alertaEl){
+    if(porVencer.length>0){
+      const nombres=porVencer.map(p=>p.nombre).join(', ');
+      alertaEl.style.display='flex';
+      alertaEl.innerHTML=`<span style="font-size:18px;flex-shrink:0">⏰</span>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:13px;color:#A32D2D">Vence en 5 días o menos</div>
+          <div style="font-size:12px;color:#A32D2D;margin-top:2px">${nombres}</div>
+        </div>
+        <button onclick="showTab('stock');filtrarEstado('vence')" style="background:#A32D2D;color:white;border:none;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">Ver</button>`;
+    } else {
+      alertaEl.style.display='none';
+    }
+  }
 }
 
 window.filtrarEstado=estado=>{
@@ -743,12 +777,19 @@ window.renderStock=(filtroEspecial)=>{
   let prods=productos.filter(p=>{
     if(filtroEspecial==='out') return p.estado==='out';
     if(filtroEspecial==='low') return p.estado==='low';
+    if(filtroEspecial==='vence'){
+      const hoy2=new Date(); hoy2.setHours(0,0,0,0);
+      const en7b=new Date(hoy2); en7b.setDate(en7b.getDate()+7);
+      const fechas=[];
+      if(p.lotes?.length) p.lotes.forEach(l=>fechas.push(l.fecha));
+      else if(p.vencimiento) fechas.push(p.vencimiento);
+      return fechas.some(f=>{ const v=new Date(f+'T00:00:00'); return v>=hoy2&&v<=en7b; });
+    }
     return(!q||p.nombre?.toLowerCase().includes(q))&&(!cat||p.categoria===cat);
   }).map(p=>{
     let e=p.estado||'ok';
     if(p.stockMinimo&&parseFloat(p.cantidad||0)<parseFloat(p.stockMinimo)&&e==='ok') e='low';
-    const v=p.vencimiento?new Date(p.vencimiento+'T00:00:00'):null;
-    return{...p,estadoEfectivo:e,venceProximo:v&&v<=en7};
+    return{...p,estadoEfectivo:e};
   });
 
   if(!prods.length){
@@ -1356,14 +1397,29 @@ window.pedirRecetas=async()=>{
   if(!disponibles){ el.innerHTML='<div class="empty"><span class="empty-icon">🥫</span><p>No hay stock OK para sugerir recetas.</p></div>'; return; }
   try{
     const resp=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',headers:{'Content-Type':'application/json'},
+      method:'POST',
+      headers:{'Content-Type':'application/json','anthropic-dangerous-allow-browser':'true'},
       body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,
         messages:[{role:'user',content:`Tengo estos ingredientes disponibles: ${disponibles}. Sugerime 3 recetas simples que pueda hacer con lo que tengo. Para cada una: nombre, ingredientes de mi lista que usa, y pasos básicos en 4 líneas máximo. Responde en español rioplatense, amigable y práctico.`}]})
     });
     const data=await resp.json();
+    if(data.error){ throw new Error(data.error.message); }
     const txt=data.content?.[0]?.text||'Sin respuesta';
     el.innerHTML=`<div class="card" style="white-space:pre-wrap;font-size:13px;line-height:1.6">${txt}</div>`;
-  } catch(e){ el.innerHTML='<div class="empty"><span class="empty-icon">⚠️</span><p>Error al consultar. Intentá de nuevo.</p></div>'; }
+  } catch(e){
+    el.innerHTML=`<div class="card" style="font-size:13px;line-height:1.6;color:var(--texto-sec)">
+      <p style="font-weight:700;color:var(--texto);margin-bottom:8px">💡 Sugerencias con lo que tenés:</p>
+      <p>Con <strong>${disponibles.split(',').slice(0,5).join(', ')}</strong> y más productos, podés hacer:</p>
+      <br>
+      <p>🍳 <strong>Revuelto rápido</strong> — Usá lo que tengas de verduras, huevos si tenés, y saltea todo junto.</p>
+      <br>
+      <p>🥗 <strong>Ensalada completa</strong> — Combiná lo que tengas fresco con algún cereal o legumbre cocida.</p>
+      <br>
+      <p>🍲 <strong>Guiso o sopa</strong> — Con verduras, alguna proteína y caldo podés armar algo rico y rápido.</p>
+      <br>
+      <p style="font-size:11px;color:var(--texto-sec);margin-top:8px">Para recetas personalizadas con IA, la función requiere conexión al servidor de Claude.</p>
+    </div>`;
+  }
 };
 
 // ── DESEOS ──
