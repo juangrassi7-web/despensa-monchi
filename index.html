@@ -416,7 +416,13 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--verde);b
   <div class="section" id="sec-recetas">
     <div class="card">
       <div class="card-title">¿Qué cocinamos hoy?</div>
-      <p style="font-size:13px;color:var(--texto-sec);margin-bottom:14px;line-height:1.5">Copiá el resumen de tu despensa y pegáselo a Claude para que te sugiera recetas con lo que tenés.</p>
+      <p style="font-size:13px;color:var(--texto-sec);margin-bottom:12px;line-height:1.5">Copiá el resumen de tu despensa y pegáselo a Claude para que te sugiera recetas con lo que tenés.</p>
+      <div class="field-label">¿Para qué momento del día?</div>
+      <div class="chip-row" id="chip-receta-momento">
+        <button class="chip" data-val="desayuno" onclick="selChip(this,'chip-receta-momento')">☕ Desayuno / Merienda</button>
+        <button class="chip active" data-val="almuerzo" onclick="selChip(this,'chip-receta-momento')">🍽️ Almuerzo / Cena</button>
+        <button class="chip" data-val="postre" onclick="selChip(this,'chip-receta-momento')">🍮 Postre</button>
+      </div>
       <button class="btn btn-primary" onclick="copiarResumenRecetas()">📋 Copiar resumen para pedir recetas</button>
       <div id="recetas-copiado" style="display:none;margin-top:10px;background:var(--verde-light);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--verde-dark);font-weight:500;line-height:1.5">
         ✅ ¡Copiado! Ahora abrí Claude y pegá el texto. Claude te va a sugerir recetas con lo que tenés en casa.
@@ -498,6 +504,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--verde);b
       <div><div class="field-label">Cantidad</div><input type="number" id="edit-cant" min="0" step="0.5"></div>
       <div><div class="field-label">Vencimiento</div><input type="date" id="edit-vence"></div>
     </div>
+    <div class="field-label">Stock mínimo</div>
+    <input type="number" id="edit-minimo" min="0" step="0.5" placeholder="ej: 2 — avisa cuando queda poco">
     <div class="field-label">Notas</div>
     <input type="text" id="edit-notas" placeholder="Notas...">
     <button class="btn btn-primary" onclick="guardarEdicion()">Guardar cambios</button>
@@ -950,6 +958,7 @@ window.abrirEditar=id=>{
   document.getElementById('edit-cant').value=p.cantidad||'';
   document.getElementById('edit-vence').value=p.vencimiento||'';
   document.getElementById('edit-notas').value=p.notas||'';
+  document.getElementById('edit-minimo').value=p.stockMinimo||'';
   selChipVal('chip-estado',p.estado||'ok');
   selChipVal('chip-evento','');
   document.getElementById('modal-edit').classList.add('open');
@@ -963,8 +972,9 @@ window.guardarEdicion=async()=>{
   const cantidad=document.getElementById('edit-cant').value||p.cantidad;
   const notas=document.getElementById('edit-notas').value.trim();
   const vencimiento=document.getElementById('edit-vence').value||p.vencimiento||null;
+  const stockMinimo=document.getElementById('edit-minimo').value||p.stockMinimo||null;
   try{
-    await setDoc(doc(db,'despensa',editingId),{...p,estado,cantidad,notas,vencimiento,
+    await setDoc(doc(db,'despensa',editingId),{...p,estado,cantidad,notas,vencimiento,stockMinimo,
       fechaUpdate:serverTimestamp(),updatePor:auth.currentUser?.displayName?.split(' ')[0]||'?'});
     if(evento) await addDoc(collection(db,'eventos'),{
       producto:p.nombre,tipo:evento,fecha:serverTimestamp(),
@@ -1385,10 +1395,44 @@ function renderHistorial(){
         <div class="hist-producto">${e.producto}</div>
         <div class="hist-meta">${labels[e.tipo]||e.tipo} · ${e.por||'?'} · ${fmtTs(e.fecha)}</div>
       </div>
+      <button class="btn-icon" style="flex-shrink:0;font-size:13px" onclick="eliminarEvento('${e.id}','${e.tipo}','${e.producto}',${e.cantUsada||e.cantidad||0})" title="Eliminar y revertir">🗑️</button>
     </div>`).join('');
   const el=document.getElementById('historial-list');
   if(el) el.innerHTML=html||'<div class="empty"><span class="empty-icon">📋</span><p>No hay movimientos todavía.</p></div>';
 }
+
+window.eliminarEvento=async(eventoId,tipo,nombreProd,cantEvento)=>{
+  const tipoLabel={consumo:'uso',vencio:'vencimiento',compra:'compra',falta:'falta'}[tipo]||tipo;
+  if(!confirm(`¿Eliminás este registro de ${tipoLabel} y revertís el stock de "${nombreProd}"?`)) return;
+  try{
+    const prod=productos.find(p=>p.nombre===nombreProd);
+    if(prod){
+      const cantActual=parseFloat(prod.cantidad)||0;
+      const cant=parseFloat(cantEvento)||0;
+      let nuevaCantidad=cantActual;
+      if(tipo==='consumo'||tipo==='vencio'){
+        // Revertir: devolver la cantidad al stock
+        nuevaCantidad=cantActual+cant;
+      } else if(tipo==='compra'){
+        // Revertir: sacar lo que se compró
+        nuevaCantidad=Math.max(0,cantActual-cant);
+      }
+      // Recalcular estado
+      let nuevoEstado='ok';
+      if(nuevaCantidad===0) nuevoEstado='out';
+      else if(prod.stockMinimo&&nuevaCantidad<parseFloat(prod.stockMinimo)) nuevoEstado='low';
+      await setDoc(doc(db,'despensa',prod.id),{
+        ...prod,
+        cantidad:String(nuevaCantidad),
+        estado:nuevoEstado,
+        fechaUpdate:serverTimestamp(),
+        updatePor:auth.currentUser?.displayName?.split(' ')[0]||'?'
+      });
+    }
+    await deleteDoc(doc(db,'eventos',eventoId));
+    toast('↩️ Movimiento eliminado y stock revertido');
+  } catch(e){ toast('Error: '+e.message); }
+};
 
 function fmtTs(ts){
   if(!ts) return '';
@@ -1405,10 +1449,16 @@ window.copiarResumenRecetas=()=>{
   const disponibles=productos.filter(p=>p.estado==='ok').map(p=>`${p.nombre} (${p.cantidad||'?'} ${p.unidad||''})`);
   const poco=productos.filter(p=>p.estado==='low').map(p=>p.nombre);
   if(!disponibles.length){ toast('No hay productos con stock OK todavía'); return; }
+  const momento=document.querySelector('#chip-receta-momento .chip.active')?.dataset.val||'almuerzo';
+  const momentoTexto={
+    desayuno:'desayuno o merienda',
+    almuerzo:'almuerzo o cena',
+    postre:'postre'
+  }[momento];
   let txt='Hola! Tengo estos ingredientes disponibles en casa:\n\n';
   txt+=disponibles.map(p=>`• ${p}`).join('\n');
   if(poco.length){ txt+=`\n\nTambién tengo poco de: ${poco.join(', ')}`; }
-  txt+='\n\n¿Podés sugerirme 3 recetas simples que pueda hacer con lo que tengo? Para cada una poné el nombre, qué ingredientes de mi lista usa y los pasos básicos en 4 líneas máximo. Respondé en español rioplatense.';
+  txt+=`\n\n¿Podés sugerirme 3 recetas de ${momentoTexto} que pueda hacer con lo que tengo? Para cada una poné el nombre, qué ingredientes de mi lista usa y los pasos básicos en 4 líneas máximo. Respondé en español rioplatense.`;
   navigator.clipboard.writeText(txt).then(()=>{
     document.getElementById('recetas-copiado').style.display='block';
     setTimeout(()=>document.getElementById('recetas-copiado').style.display='none', 5000);
@@ -1596,6 +1646,8 @@ window.registrarUsamos=async()=>{
   if(!cantUsada||cantUsada<=0){ toast('Ingresá la cantidad usada'); return; }
   const p=productos.find(x=>x.id===id);
   if(!p){ toast('Producto no encontrado'); return; }
+  const btnReg=document.querySelector('#sec-usamos .btn-primary');
+  if(btnReg){ btnReg.disabled=true; btnReg.textContent='Registrando...'; }
   const tipo=document.querySelector('#chip-usamos-tipo .chip.active')?.dataset.val||'consumo';
   const nota=document.getElementById('usamos-nota').value.trim();
   const cantActual=parseFloat(p.cantidad)||0;
@@ -1652,11 +1704,16 @@ window.registrarUsamos=async()=>{
     document.getElementById('usamos-nota').value='';
     document.getElementById('usamos-stock-actual').textContent='';
     document.getElementById('usamos-resto-preview').style.display='none';
+    document.getElementById('usamos-dropdown').style.display='none';
     selChipVal('chip-usamos-tipo','consumo');
     const msgs={consumo:`✅ Registrado — quedan ${resto} ${p.unidad||''}`,vencio:'🗑️ Registrado como vencido',pudrio:'🤢 Registrado como podrido'};
     toast(msgs[tipo]||'✅ Registrado');
     if(nuevoEstado==='out') setTimeout(()=>toast(`⚠️ ${p.nombre} quedó en 0 — aparece en lista de compras`),2600);
   } catch(e){ toast('Error: '+e.message); }
+  finally {
+    const btnReg=document.querySelector('#sec-usamos .btn-primary');
+    if(btnReg){ btnReg.disabled=false; btnReg.textContent='Registrar'; }
+  }
 };
 
 // ── EXPORTAR ──
