@@ -1396,29 +1396,16 @@ window.pedirRecetas=async()=>{
   const disponibles=productos.filter(p=>p.estado==='ok').map(p=>p.nombre).join(', ');
   if(!disponibles){ el.innerHTML='<div class="empty"><span class="empty-icon">🥫</span><p>No hay stock OK para sugerir recetas.</p></div>'; return; }
   try{
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+    const resp=await fetch('/api/recetas',{
       method:'POST',
-      headers:{'Content-Type':'application/json','anthropic-dangerous-allow-browser':'true'},
-      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,
-        messages:[{role:'user',content:`Tengo estos ingredientes disponibles: ${disponibles}. Sugerime 3 recetas simples que pueda hacer con lo que tengo. Para cada una: nombre, ingredientes de mi lista que usa, y pasos básicos en 4 líneas máximo. Responde en español rioplatense, amigable y práctico.`}]})
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ingredientes:disponibles})
     });
     const data=await resp.json();
-    if(data.error){ throw new Error(data.error.message); }
-    const txt=data.content?.[0]?.text||'Sin respuesta';
-    el.innerHTML=`<div class="card" style="white-space:pre-wrap;font-size:13px;line-height:1.6">${txt}</div>`;
+    if(data.error) throw new Error(data.error);
+    el.innerHTML=`<div class="card" style="white-space:pre-wrap;font-size:13px;line-height:1.6">${data.texto}</div>`;
   } catch(e){
-    el.innerHTML=`<div class="card" style="font-size:13px;line-height:1.6;color:var(--texto-sec)">
-      <p style="font-weight:700;color:var(--texto);margin-bottom:8px">💡 Sugerencias con lo que tenés:</p>
-      <p>Con <strong>${disponibles.split(',').slice(0,5).join(', ')}</strong> y más productos, podés hacer:</p>
-      <br>
-      <p>🍳 <strong>Revuelto rápido</strong> — Usá lo que tengas de verduras, huevos si tenés, y saltea todo junto.</p>
-      <br>
-      <p>🥗 <strong>Ensalada completa</strong> — Combiná lo que tengas fresco con algún cereal o legumbre cocida.</p>
-      <br>
-      <p>🍲 <strong>Guiso o sopa</strong> — Con verduras, alguna proteína y caldo podés armar algo rico y rápido.</p>
-      <br>
-      <p style="font-size:11px;color:var(--texto-sec);margin-top:8px">Para recetas personalizadas con IA, la función requiere conexión al servidor de Claude.</p>
-    </div>`;
+    el.innerHTML=`<div class="empty"><span class="empty-icon">⚠️</span><p>Error al consultar: ${e.message}</p></div>`;
   }
 };
 
