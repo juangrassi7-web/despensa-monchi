@@ -416,10 +416,21 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--verde);b
   <div class="section" id="sec-recetas">
     <div class="card">
       <div class="card-title">¿Qué cocinamos hoy?</div>
-      <p style="font-size:13px;color:var(--texto-sec);margin-bottom:14px;line-height:1.5">Basado en lo que tenés en stock, Claude te sugiere recetas.</p>
-      <button class="btn btn-primary" onclick="pedirRecetas()">✨ Sugerirme recetas con lo que tengo</button>
+      <p style="font-size:13px;color:var(--texto-sec);margin-bottom:14px;line-height:1.5">Copiá el resumen de tu despensa y pegáselo a Claude para que te sugiera recetas con lo que tenés.</p>
+      <button class="btn btn-primary" onclick="copiarResumenRecetas()">📋 Copiar resumen para pedir recetas</button>
+      <div id="recetas-copiado" style="display:none;margin-top:10px;background:var(--verde-light);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--verde-dark);font-weight:500;line-height:1.5">
+        ✅ ¡Copiado! Ahora abrí Claude y pegá el texto. Claude te va a sugerir recetas con lo que tenés en casa.
+      </div>
     </div>
-    <div id="recetas-result"></div>
+    <div class="card" style="background:var(--bg-sec)">
+      <div class="card-title">Cómo usarlo</div>
+      <div style="font-size:13px;color:var(--texto-sec);line-height:1.8">
+        <div>1️⃣ Tocá el botón de arriba</div>
+        <div>2️⃣ Abrí Claude (claude.ai)</div>
+        <div>3️⃣ Pegá el texto copiado</div>
+        <div>4️⃣ Claude te sugiere recetas 🍳</div>
+      </div>
+    </div>
   </div>
 
   <!-- DESEOS -->
@@ -1390,23 +1401,18 @@ function fmtTs(ts){
 }
 
 // ── RECETAS ──
-window.pedirRecetas=async()=>{
-  const el=document.getElementById('recetas-result');
-  el.innerHTML='<div style="text-align:center;padding:24px;color:var(--texto-sec)">✨ Consultando a Claude...</div>';
-  const disponibles=productos.filter(p=>p.estado==='ok').map(p=>p.nombre).join(', ');
-  if(!disponibles){ el.innerHTML='<div class="empty"><span class="empty-icon">🥫</span><p>No hay stock OK para sugerir recetas.</p></div>'; return; }
-  try{
-    const resp=await fetch('/api/recetas',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ingredientes:disponibles})
-    });
-    const data=await resp.json();
-    if(data.error) throw new Error(data.error);
-    el.innerHTML=`<div class="card" style="white-space:pre-wrap;font-size:13px;line-height:1.6">${data.texto}</div>`;
-  } catch(e){
-    el.innerHTML=`<div class="empty"><span class="empty-icon">⚠️</span><p>Error al consultar: ${e.message}</p></div>`;
-  }
+window.copiarResumenRecetas=()=>{
+  const disponibles=productos.filter(p=>p.estado==='ok').map(p=>`${p.nombre} (${p.cantidad||'?'} ${p.unidad||''})`);
+  const poco=productos.filter(p=>p.estado==='low').map(p=>p.nombre);
+  if(!disponibles.length){ toast('No hay productos con stock OK todavía'); return; }
+  let txt='Hola! Tengo estos ingredientes disponibles en casa:\n\n';
+  txt+=disponibles.map(p=>`• ${p}`).join('\n');
+  if(poco.length){ txt+=`\n\nTambién tengo poco de: ${poco.join(', ')}`; }
+  txt+='\n\n¿Podés sugerirme 3 recetas simples que pueda hacer con lo que tengo? Para cada una poné el nombre, qué ingredientes de mi lista usa y los pasos básicos en 4 líneas máximo. Respondé en español rioplatense.';
+  navigator.clipboard.writeText(txt).then(()=>{
+    document.getElementById('recetas-copiado').style.display='block';
+    setTimeout(()=>document.getElementById('recetas-copiado').style.display='none', 5000);
+  }).catch(()=>{ toast('Error al copiar — intentá de nuevo'); });
 };
 
 // ── DESEOS ──
